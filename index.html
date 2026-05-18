@@ -39,8 +39,8 @@
       #save-tools { opacity: .4; }
       #save-tools:hover, #save-tools:focus-within { opacity: 1; }
     }
-    #save-tools button { background: #1a1a2e; color: #f9a01b; border: 1px solid #f9a01b44; border-radius: 8px; padding: 6px 10px; font-size: 11px; font-family: sans-serif; cursor: pointer; }
-    #save-tools button:active { background: #f9a01b22; }
+    #save-tools button, #save-tools a { background: #1a1a2e; color: #f9a01b; border: 1px solid #f9a01b44; border-radius: 8px; padding: 6px 10px; font-size: 11px; font-family: sans-serif; cursor: pointer; text-decoration: none; display: inline-block; line-height: 1.2; }
+    #save-tools button:active, #save-tools a:active { background: #f9a01b22; }
     #loading {
       position: fixed; inset: 0; background: #0a0a0f;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -2061,6 +2061,7 @@ function App() {
 
   <!-- Save export/import widget (independent of React; talks to localStorage directly) -->
   <div id="save-tools">
+    <a href="./guide.html" target="_blank" rel="noopener" title="打开新手指南（新标签）">📖 指南</a>
     <button type="button" onclick="window.__nbaExportSave()" title="导出全部存档为 JSON">⬇ 备份</button>
     <button type="button" onclick="document.getElementById('__nbaImportFile').click()" title="从 JSON 文件恢复存档">⬆ 恢复</button>
     <input type="file" id="__nbaImportFile" accept="application/json,.json" hidden onchange="window.__nbaImportSave(this.files[0]); this.value=''">
