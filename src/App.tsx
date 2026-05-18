@@ -52,13 +52,14 @@ const TRAINING_OPTIONS = [
   {id:"strength",label:"体能训练",stat:"strength",desc:"力量、耐力与对抗",icon:"💪"},
   {id:"iq",label:"战术学习",stat:"iq",desc:"录像研究与战术理解",icon:"🧠"},
 ];
+// D1: 改为按天数康复（一场 ≈ 2.5 天）。休赛期/季后赛间隙也能自然恢复。
 const INJURY_TYPES = [
-  {name:"踝关节扭伤",minG:3,maxG:8,stats:["speed"],severity:"轻伤"},
-  {name:"膝盖韧带拉伤",minG:12,maxG:30,stats:["speed","strength"],severity:"重伤"},
-  {name:"肌肉拉伤",minG:4,maxG:12,stats:["strength"],severity:"轻伤"},
-  {name:"手指骨折",minG:6,maxG:18,stats:["shooting","passing"],severity:"中伤"},
-  {name:"背部痉挛",minG:3,maxG:8,stats:["strength","defense"],severity:"轻伤"},
-  {name:"跟腱撕裂",minG:40,maxG:60,stats:["speed","strength"],severity:"赛季报销"},
+  {name:"踝关节扭伤", minDays:8, maxDays:20, stats:["speed"], severity:"轻伤"},
+  {name:"膝盖韧带拉伤", minDays:30, maxDays:75, stats:["speed","strength"], severity:"重伤"},
+  {name:"肌肉拉伤", minDays:10, maxDays:30, stats:["strength"], severity:"轻伤"},
+  {name:"手指骨折", minDays:15, maxDays:45, stats:["shooting","passing"], severity:"中伤"},
+  {name:"背部痉挛", minDays:8, maxDays:20, stats:["strength","defense"], severity:"轻伤"},
+  {name:"跟腱撕裂", minDays:100, maxDays:150, stats:["speed","strength"], severity:"赛季报销"},
 ];
 const BRANDS = [
   {name:"Nike",type:"球鞋",baseOffer:5,icon:"👟"},
@@ -237,10 +238,10 @@ function generatePotential(pos, arc) {
   return c;
 }
 
-function generateInitialStats(pos, ceiling) {
-  const s = {};
+function generateInitialStats(pos: string, ceiling: any, ageBoost: number = 0) {
+  const s: any = {};
   Object.keys(ceiling).forEach(k => {
-    const r = 0.52 + Math.random()*0.22;
+    const r = 0.52 + Math.random()*0.22 + ageBoost;
     s[k] = Math.max(38, Math.min(ceiling[k], Math.round(ceiling[k]*r)));
   });
   if(pos==="C") s.speed = Math.min(s.speed, 62);
@@ -571,6 +572,7 @@ function SavesLobby({onLoad, onNew}) {
                 </div>
                 <div style={{display:"flex",gap:12,fontSize:12,color:"#666",marginBottom:12}}>
                   <span>第{sv.season||1}赛季</span>
+                  {sv.age && <span>{sv.age}岁</span>}
                   <span>{sv.wins}胜{sv.losses}负</span>
                   <span>${sv.salary||2.5}M/年</span>
                   {sv.injured && <span style={{color:"#ff6b6b"}}>🤕伤病</span>}
@@ -596,20 +598,24 @@ function SavesLobby({onLoad, onNew}) {
 }
 
 // ════════════════ CREATE ════════════════
-function CreateScreen({onDone, onBack}) {
+function CreateScreen({onDone, onBack}: any) {
   const [name, setName] = useState("");
   const [pos, setPos] = useState("PG");
   const [arc, setArc] = useState("");
   const [custom, setCustom] = useState(false);
   const [ctext, setCtext] = useState("");
+  const [age, setAge] = useState(19); // D2: starting age, 18-26 slider
   const finalArc = custom ? ctext : arc;
 
   function submit() {
     if(!name.trim() || !finalArc.trim()) return;
     const ceiling = generatePotential(pos, finalArc);
-    const stats = generateInitialStats(pos, ceiling);
+    // D2: younger rookies get slightly lower initial stats (more room to grow);
+    // older rookies start higher but cap shrinks.
+    const ageBoost = age >= 23 ? 0.05 : age <= 19 ? -0.03 : 0;
+    const stats = generateInitialStats(pos, ceiling, ageBoost);
     const physicals = generatePhysicals(pos);
-    onDone({name:name.trim(), position:pos, archetype:finalArc.trim(), stats, ceiling, overall:calcOverall(stats), physicals});
+    onDone({name:name.trim(), position:pos, archetype:finalArc.trim(), stats, ceiling, overall:calcOverall(stats), physicals, age});
   }
 
   return (
@@ -658,6 +664,23 @@ function CreateScreen({onDone, onBack}) {
               <div style={{fontSize:11,color:"#666",marginTop:6}}>AI会根据你的风格生成解说</div>
             </div>
           )}
+        </div>
+        {/* D2: age slider 18-26 */}
+        <div style={{marginBottom:18}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2}}>入联年龄</div>
+            <div style={{fontSize:13,color:"#fff",fontWeight:700}}>{age} 岁</div>
+          </div>
+          <input type="range" min="18" max="26" value={age} onChange={e=>setAge(parseInt(e.target.value))}
+            style={{width:"100%",accentColor:"#f9a01b"}}/>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#555",marginTop:4}}>
+            <span>18 · 高潜力</span>
+            <span>22</span>
+            <span>26 · 已成熟</span>
+          </div>
+          <div style={{fontSize:10,color:"#666",marginTop:6,lineHeight:1.5}}>
+            年龄越大初始属性越高，但生涯越短。32 岁后潜力开始衰退。
+          </div>
         </div>
         <div style={{background:"#0f1923",borderRadius:10,padding:14,marginBottom:20,border:"1px solid #f9a01b22"}}>
           <div style={{fontSize:11,color:"#f9a01b",marginBottom:4}}>⚠ 潜力说明</div>
@@ -877,7 +900,7 @@ function SeriesCard({series, myTeamAbbr, teamColor, ac, onSimGame, simming}) {
   );
 }
 
-function PlayoffView({bracket, myTeam, onSimGame, simming, onOffseason, ac, narrative, narrativeCtx}) {
+function PlayoffView({bracket, myTeam, onSimGame, simming, onOffseason, onAutoSimAll, ac, narrative, narrativeCtx}: any) {
   const [tab, setTab] = useState(()=>myTeam.conf==="West"?"west":"east");
   if(!bracket) return null;
 
@@ -903,15 +926,24 @@ function PlayoffView({bracket, myTeam, onSimGame, simming, onOffseason, ac, narr
     <div style={{padding:14}}>
       {/* Always-visible sim button for next unfinished series */}
       {nextActiveSeries && !champion && (
-        <div style={{background:"#111827",borderRadius:10,padding:"12px 14px",marginBottom:12,border:"1px solid "+ac+"44",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{background:"#111827",borderRadius:10,padding:"12px 14px",marginBottom:12,border:"1px solid "+ac+"44",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
           <div>
             <div style={{fontSize:11,color:"#888"}}>下一场</div>
             <div style={{fontSize:13,fontWeight:700,color:"#ccc"}}>{nextActiveSeries.teamA.abbr} vs {nextActiveSeries.teamB.abbr} · {nextActiveSeries.round}</div>
           </div>
-          <button onClick={()=>onSimGame(nextActiveSeries)} disabled={simming}
-            style={{padding:"9px 18px",background:simming?"#222":myTeam.color,border:"1px solid "+(simming?"#333":ac),borderRadius:9,color:simming?"#444":ac,fontWeight:700,fontSize:13,cursor:simming?"not-allowed":"pointer",fontFamily:"sans-serif"}}>
-            {simming?"模拟中...":"▶ 模拟"}
-          </button>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>onSimGame(nextActiveSeries)} disabled={simming}
+              style={{padding:"9px 14px",background:simming?"#222":myTeam.color,border:"1px solid "+(simming?"#333":ac),borderRadius:9,color:simming?"#444":ac,fontWeight:700,fontSize:13,cursor:simming?"not-allowed":"pointer",fontFamily:"sans-serif"}}>
+              {simming?"模拟中...":"▶ 单场"}
+            </button>
+            {/* D6: auto-sim all remaining */}
+            {onAutoSimAll && (
+              <button onClick={onAutoSimAll} disabled={simming}
+                style={{padding:"9px 14px",background:simming?"#222":"#1a1a0d",border:"1px solid "+(simming?"#333":"#f9a01b66"),borderRadius:9,color:simming?"#444":"#f9a01b",fontWeight:700,fontSize:13,cursor:simming?"not-allowed":"pointer",fontFamily:"sans-serif"}}>
+                ⏩ 全部
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -1051,7 +1083,7 @@ function generateSeasonAwards(playerName: string, teamAbbr: string, teamName: st
 }
 
 function MainScreen({saveId, init, onQuit}) {
-  const [player, setPlayer] = useState(init.player);
+  const [player, setPlayer] = useState(() => ({...init.player, age: init.player.age || 19}));
   const [team, setTeam] = useState(init.team);
   const [season, setSeason] = useState(init.season||1);
   const [phase, setPhase] = useState(init.phase||"regular");
@@ -1094,12 +1126,25 @@ function MainScreen({saveId, init, onQuit}) {
   const [tradeResult, setTradeResult] = useState(null);
   const [tradeLoading, setTradeLoading] = useState(false);
   const [restModal, setRestModal] = useState(false);
+  const [retireModal, setRetireModal] = useState(false);
+  const [retired, setRetired] = useState(false);
   const [restInput, setRestInput] = useState(1);
 
   const played = regularGames.filter(g=>g.status!=="upcoming");
   const wins = regularGames.filter(g=>g.status==="won").length;
   const seasonOver = regularGames.filter(g=>g.status==="upcoming").length===0;
-  const totalAlloc = Object.values(trainAlloc).reduce((a,b)=>a+b,0);
+  const totalAlloc = Object.values(trainAlloc).reduce((a:number, b:any) => a + (b as number), 0);
+  // D4: dynamic training-point budget based on previous-season performance + age
+  const maxTrainPoints = useMemo(() => {
+    let pts = 6;
+    if(avg.pts > 25 && avg.ast > 5 && wins > 50 && player.overall > 85) pts += 2; // MVP-tier
+    else if(avg.pts > 20 && wins > 41) pts += 1; // good season
+    const age = player.age || 19;
+    if(age < 25) pts += 1;
+    if(age > 30) pts -= 1;
+    if(age > 35) pts -= 1;
+    return Math.max(3, Math.min(9, pts));
+  }, [avg.pts, avg.ast, wins, player.overall, player.age]);
 
   const avg = useMemo(()=>{
     const pg = played.filter(g=>g.stats);
@@ -1113,11 +1158,11 @@ function MainScreen({saveId, init, onQuit}) {
     const saves = loadSaves();
     saves[saveId] = {
       id:saveId, playerName:player.name, position:player.position, archetype:player.archetype,
-      overall:player.overall, teamAbbr:team.abbr, wins, losses:played.length-wins,
+      overall:player.overall, age:player.age, teamAbbr:team.abbr, wins, losses:played.length-wins,
       gamesPlayed:played.length, injured:!!injury, salary:contract.salary, savedAt:Date.now(),
       player, team, draftPick:init.draftPick, season, phase, regularGames, playoffBracket, playoffRound,
       injury, resting, injuryLog, relationships, contract, brands, offseasonDone, pendingOffer:contractOffer,
-      freeAgent, seasonAwards, teammates, savings, ownedCars, ownedHouse, currentRental, faOffers
+      freeAgent, seasonAwards, teammates, savings, ownedCars, ownedHouse, currentRental, faOffers, retired
     };
     writeSaves(saves);
     setSaveMsg("已保存 ✓");
@@ -1134,11 +1179,13 @@ function MainScreen({saveId, init, onQuit}) {
   }, [regularGames, playoffBracket]);
 
   function checkNewInjury() {
-    const chance = 0.02; // ~1-2 injuries per 82 games, many seasons injury-free
-    if(Math.random()<chance) {
-      const t = INJURY_TYPES[Math.floor(Math.random()*INJURY_TYPES.length)];
-      const g = t.minG + Math.floor(Math.random()*(t.maxG-t.minG+1));
-      return {name:t.name, gamesLeft:g, affectedStats:t.stats, severity:t.severity};
+    // D1: injury chance scales with age (+0.5% per year above 30)
+    const ageBonus = Math.max(0, (player.age || 22) - 30) * 0.005;
+    const chance = 0.02 + ageBonus;
+    if(Math.random() < chance) {
+      const t: any = INJURY_TYPES[Math.floor(Math.random() * INJURY_TYPES.length)];
+      const d = t.minDays + Math.floor(Math.random() * (t.maxDays - t.minDays + 1));
+      return { name: t.name, daysLeft: d, affectedStats: t.stats, severity: t.severity };
     }
     return null;
   }
@@ -1178,20 +1225,25 @@ function MainScreen({saveId, init, onQuit}) {
     let newInjLog = [...injuryLog];
     let newRels = {...relationships};
     let injEvent = null;
+    let prevDate: Date | null = null;
     for(let i=0; i<games.length; i++) {
       const g = games[i];
+      const curDate = new Date(g.date);
+      // D1: deduct elapsed days from injury (was: 1 per game)
+      const elapsedDays = prevDate ? Math.max(1, Math.round((curDate.getTime() - prevDate.getTime()) / 86400000)) : 1;
+      prevDate = curDate;
       const isResting = curRest>0;
       if(isResting) { curRest--; }
       else if(curInj) {
-        curInj = {...curInj, gamesLeft:curInj.gamesLeft-1};
-        if(curInj.gamesLeft<=0) {
+        curInj = {...curInj, daysLeft: (curInj.daysLeft || 0) - elapsedDays};
+        if(curInj.daysLeft <= 0) {
           newInjLog.push({name:curInj.name,date:g.date,type:"recovered"});
           injEvent = "🟢 已从「"+curInj.name+"」中恢复！";
           curInj = null;
         }
       } else {
         const ni = checkNewInjury();
-        if(ni) { curInj=ni; newInjLog.push({name:ni.name,date:g.date,games:ni.gamesLeft,type:"injured"}); injEvent="🔴 受伤！"+ni.name+"，预计缺席 "+ni.gamesLeft+" 场"; }
+        if(ni) { curInj=ni; newInjLog.push({name:ni.name,date:g.date,days:ni.daysLeft,type:"injured"}); injEvent="🔴 受伤！"+ni.name+"，预计缺席 "+ni.daysLeft+" 天"; }
       }
       const res = simOneGame(curInj, isResting);
       newReg = newReg.map(s=>s.id===g.id?{...s,status:res.win?"won":"lost",stats:res}:s);
@@ -1245,8 +1297,8 @@ function MainScreen({saveId, init, onQuit}) {
           const isMyMatch = s.teamA.abbr===team.abbr||s.teamB.abbr===team.abbr;
           const imTeamA = s.teamA.abbr===team.abbr;
           let curInj = injury; let newInjLog=[...injuryLog]; let injEvent=null;
-          if(curInj){curInj={...curInj,gamesLeft:curInj.gamesLeft-1};if(curInj.gamesLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent="🟢 已恢复！";curInj=null;}}
-          else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,games:ni.gamesLeft,type:"injured"});injEvent="🔴 受伤！"+ni.name;}}
+          if(curInj){curInj={...curInj,daysLeft:(curInj.daysLeft||0)-2};if(curInj.daysLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent="🟢 已恢复！";curInj=null;}}
+          else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,days:ni.daysLeft,type:"injured"});injEvent="🔴 受伤！"+ni.name;}}
           const res = isMyMatch ? simOneGame(curInj,false) : {pts:0,ast:0,reb:0,stl:0,blk:0,win:Math.random()>0.45,injured:false,rested:false};
           const aWon = imTeamA ? res.win : !res.win;
           if(aWon) s.winsA++; else s.winsB++;
@@ -1266,8 +1318,8 @@ function MainScreen({saveId, init, onQuit}) {
         const isMyMatch = s.teamA.abbr===team.abbr||s.teamB.abbr===team.abbr;
         const imTeamA = s.teamA.abbr===team.abbr;
         let curInj=injury; let newInjLog=[...injuryLog]; let injEvent=null;
-        if(curInj){curInj={...curInj,gamesLeft:curInj.gamesLeft-1};if(curInj.gamesLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent="🟢 已恢复！";curInj=null;}}
-        else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,games:ni.gamesLeft,type:"injured"});injEvent="🔴 受伤！"+ni.name;}}
+        if(curInj){curInj={...curInj,daysLeft:(curInj.daysLeft||0)-2};if(curInj.daysLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent="🟢 已恢复！";curInj=null;}}
+        else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,days:ni.daysLeft,type:"injured"});injEvent="🔴 受伤！"+ni.name;}}
         const res = isMyMatch ? simOneGame(curInj,false) : {pts:0,ast:0,reb:0,stl:0,blk:0,win:Math.random()>0.45,injured:false,rested:false};
         const aWon = imTeamA ? res.win : !res.win;
         if(aWon) s.winsA++; else s.winsB++;
@@ -1334,9 +1386,11 @@ function MainScreen({saveId, init, onQuit}) {
   }
 
 
-  function allocTrain(stat, delta) {
-    const c = trainAlloc[stat]; if(c+delta<0) return; if(delta>0&&totalAlloc>=6) return;
-    setTrainAlloc({...trainAlloc,[stat]:c+delta});
+  function allocTrain(stat: string, delta: number) {
+    const c = (trainAlloc as any)[stat];
+    if(c + delta < 0) return;
+    if(delta > 0 && totalAlloc >= maxTrainPoints) return;
+    setTrainAlloc({...trainAlloc, [stat]: c + delta});
   }
   function confirmTraining() {
     const ns = {...player.stats};
@@ -1345,8 +1399,57 @@ function MainScreen({saveId, init, onQuit}) {
     setOffseasonDone(true);
     setTrainAlloc({speed:0,shooting:0,passing:0,defense:0,strength:0,iq:0});
   }
+  // D6: keep simulating playoff games (any series) until a champion exists or no progress.
+  async function autoSimAllPlayoffs() {
+    if(!playoffBracket || playoffBracket.champion) return;
+    // Loop with a hard ceiling to avoid infinite loops.
+    for(let safety = 0; safety < 200; safety++) {
+      // Find next unfinished series
+      const allSeries: any[] = [];
+      if(playoffBracket.west) ["r1","r2","r3"].forEach(k => (playoffBracket.west[k]||[]).forEach((s:any)=>allSeries.push(s)));
+      if(playoffBracket.east) ["r1","r2","r3"].forEach(k => (playoffBracket.east[k]||[]).forEach((s:any)=>allSeries.push(s)));
+      if(playoffBracket.finals) allSeries.push(playoffBracket.finals);
+      const next = allSeries.find(s => !s.winner);
+      if(!next) break;
+      await simPlayoffGame(next);
+      // Brief delay so React commits before next iteration
+      await new Promise(r => setTimeout(r, 30));
+    }
+  }
+
   function startNextSeason() {
     if(freeAgent && !contractOffer) return;
+    // D1: bridge ~120 days of healing between seasons (offseason auto-heals most injuries)
+    if(injury) {
+      const newDays = (injury.daysLeft || 0) - 120;
+      if(newDays <= 0) {
+        setInjuryLog(prev => [...prev, {name: injury.name, date: new Date().toISOString(), type:"recovered"}]);
+        setInjury(null);
+      } else {
+        setInjury({...injury, daysLeft: newDays});
+      }
+    }
+    setResting(0); // clear any rest counter
+
+    // D3: age++ and apply potential decay after 32
+    const newAge = (player.age || 19) + 1;
+    let decayedCeiling = {...player.ceiling};
+    let decayedStats = {...player.stats};
+    if(newAge >= 32) {
+      // Pick 1-2 random stats to decay
+      const statKeys = Object.keys(decayedCeiling);
+      const numToDecay = Math.random() < 0.5 ? 1 : 2;
+      const shuffled = [...statKeys].sort(() => Math.random() - 0.5);
+      for(let i = 0; i < numToDecay; i++) {
+        const k = shuffled[i];
+        const drop = 1 + Math.floor(Math.random() * 2); // 1-2
+        decayedCeiling[k] = Math.max(40, decayedCeiling[k] - drop);
+        // Stats may also drop if they were at the old ceiling
+        decayedStats[k] = Math.min(decayedStats[k], decayedCeiling[k]);
+      }
+    }
+    setPlayer(prev => ({...prev, age: newAge, ceiling: decayedCeiling, stats: decayedStats, overall: calcOverall(decayedStats)}));
+
     const ns = season+1; const sy = 2024+(ns-1);
     setSeason(ns); setRegularGames(generateRegularSeason(team,sy));
     setPlayoffBracket(null); setPlayoffRound(0); setPhase("regular"); setOffseasonDone(false);
@@ -1411,10 +1514,10 @@ function MainScreen({saveId, init, onQuit}) {
   function getHealthStatus() {
     if(resting>0) return {label:"主动休战",color:"#88aaff",icon:"😴",detail:"还有 "+resting+" 场休战"};
     if(!injury) return {label:"状态健康",color:"#00ff88",icon:"✅",detail:"身体无异样"};
-    if(injury.severity==="赛季报销") return {label:"赛季报销",color:"#ff2244",icon:"🚑",detail:injury.name+" · 缺席 "+injury.gamesLeft+" 场"};
-    if(injury.severity==="重伤") return {label:"重伤",color:"#ff4444",icon:"🤕",detail:injury.name+" · 缺席 "+injury.gamesLeft+" 场"};
-    if(injury.severity==="中伤") return {label:"轻中度伤病",color:"#ff8844",icon:"🤕",detail:injury.name+" · 缺席 "+injury.gamesLeft+" 场"};
-    return {label:"轻伤",color:"#ffaa44",icon:"🤕",detail:injury.name+" · 缺席 "+injury.gamesLeft+" 场"};
+    if(injury.severity==="赛季报销") return {label:"赛季报销",color:"#ff2244",icon:"🚑",detail:injury.name+" · 还需 "+(injury.daysLeft||0)+" 天"};
+    if(injury.severity==="重伤") return {label:"重伤",color:"#ff4444",icon:"🤕",detail:injury.name+" · 还需 "+(injury.daysLeft||0)+" 天"};
+    if(injury.severity==="中伤") return {label:"轻中度伤病",color:"#ff8844",icon:"🤕",detail:injury.name+" · 还需 "+(injury.daysLeft||0)+" 天"};
+    return {label:"轻伤",color:"#ffaa44",icon:"🤕",detail:injury.name+" · 还需 "+(injury.daysLeft||0)+" 天"};
   }
   const health = getHealthStatus();
 
@@ -1439,6 +1542,38 @@ function MainScreen({saveId, init, onQuit}) {
 
   const ph = player.physicals||{heightCm:188,wingspanCm:191,wingDelta:3,weightKg:88,staticTraits:["弹跳精英"],dynamicTraits:["挡拆高手"]};
 
+  // D5: retired overlay
+  if(retired) {
+    return (
+      <div style={{minHeight:"100vh",background:"#0a0a0f",color:"#fff",fontFamily:"sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
+        <div style={{fontSize:64,marginBottom:16}}>🏆</div>
+        <div style={{fontSize:11,color:"#f9a01b",letterSpacing:4,marginBottom:8}}>CAREER COMPLETE</div>
+        <div style={{fontSize:28,fontWeight:900,marginBottom:6,textAlign:"center"}}>{player.name}</div>
+        <div style={{fontSize:13,color:"#aaa",marginBottom:24,textAlign:"center"}}>
+          {team.city} {team.name} · {player.position} · {player.age} 岁
+        </div>
+        <div style={{background:"#111827",borderRadius:12,padding:20,marginBottom:16,minWidth:280,border:"1px solid #ffffff0d"}}>
+          <div style={{fontSize:11,color:"#888",letterSpacing:2,marginBottom:10}}>生涯总览</div>
+          <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:13}}>
+            <span style={{color:"#888"}}>赛季数</span><span style={{fontWeight:700}}>{season}</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:13}}>
+            <span style={{color:"#888"}}>退役 OVR</span><span style={{fontWeight:700,color:"#f9a01b"}}>{player.overall}</span>
+          </div>
+          {seasonAwards && seasonAwards.iChampion && (
+            <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:13}}>
+              <span style={{color:"#888"}}>总冠军</span><span style={{color:"#ffd700"}}>🏆 至少 1 次</span>
+            </div>
+          )}
+        </div>
+        <button onClick={onQuit}
+          style={{padding:"14px 36px",background:"linear-gradient(135deg,#f9a01b,#ffd700)",border:"none",borderRadius:12,color:"#000",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"sans-serif"}}>
+          返回存档大厅
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{minHeight:"100vh",background:"#0a0a0f",color:"#fff",fontFamily:"sans-serif",paddingBottom:80}}>
 
@@ -1449,7 +1584,7 @@ function MainScreen({saveId, init, onQuit}) {
             <button onClick={()=>{doSave();onQuit();}} style={{background:"rgba(0,0,0,0.3)",border:"none",color:"#fff",borderRadius:8,padding:"5px 10px",cursor:"pointer",fontFamily:"sans-serif",fontSize:12}}>← 存档</button>
             <div>
               <div style={{fontSize:15,fontWeight:800,color:ac}}>{player.name}</div>
-              <div style={{fontSize:11,opacity:0.8}}>{team.city} {team.name} · S{season} · ${contract.salary}M</div>
+              <div style={{fontSize:11,opacity:0.8}}>{team.city} {team.name} · S{season} · {player.age}岁 · ${contract.salary}M</div>
             </div>
           </div>
           <div style={{textAlign:"right"}}>
@@ -1509,7 +1644,12 @@ function MainScreen({saveId, init, onQuit}) {
               myTeam={team}
               onSimGame={simPlayoffGame}
               simming={simming}
-              onOffseason={()=>setPhase("offseason")}
+              onOffseason={async ()=>{
+                // D6: auto-finish any remaining playoff games before entering offseason
+                if(!playoffBracket?.champion) { await autoSimAllPlayoffs(); }
+                setPhase("offseason");
+              }}
+              onAutoSimAll={autoSimAllPlayoffs}
               ac={ac}
               narrative={narrative}
               narrativeCtx={narrativeCtx}
@@ -1645,7 +1785,7 @@ function MainScreen({saveId, init, onQuit}) {
           )}
           {injury && (
             <div style={{background:"#2a0d0d",borderRadius:10,padding:"9px 14px",marginBottom:10,border:"1px solid #ff444444"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#ff6b6b"}}>🤕 {injury.name} · 还需 {injury.gamesLeft} 场</div>
+              <div style={{fontSize:12,fontWeight:700,color:"#ff6b6b"}}>🤕 {injury.name} · 还需 {injury.daysLeft||0} 天</div>
             </div>
           )}
 
@@ -1782,8 +1922,8 @@ function MainScreen({saveId, init, onQuit}) {
             <div>
               <div style={{background:"#111827",borderRadius:12,padding:14,marginBottom:14,border:"1px solid #ffffff0d"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div><div style={{fontSize:14,fontWeight:700}}>训练点数</div><div style={{fontSize:11,color:"#555",marginTop:2}}>每点 +2属性（不超个人上限）</div></div>
-                  <div style={{fontSize:28,fontWeight:900,color:ac}}>{6-totalAlloc}</div>
+                  <div><div style={{fontSize:14,fontWeight:700}}>训练点数</div><div style={{fontSize:11,color:"#555",marginTop:2}}>每点 +2属性 · 本赛季总额 {maxTrainPoints} 点</div></div>
+                  <div style={{fontSize:28,fontWeight:900,color:ac}}>{maxTrainPoints-totalAlloc}</div>
                 </div>
               </div>
               {TRAINING_OPTIONS.map(opt=>{
@@ -1798,10 +1938,10 @@ function MainScreen({saveId, init, onQuit}) {
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
                       <button onClick={()=>allocTrain(opt.stat,-1)} disabled={alloc===0||atCap}
                         style={{width:34,height:34,borderRadius:8,background:"#1a1a2e",border:"1px solid #ffffff22",color:(alloc===0||atCap)?"#333":"#fff",fontSize:18,cursor:(alloc===0||atCap)?"not-allowed":"pointer",fontFamily:"sans-serif"}}>−</button>
-                      <div style={{flex:1,height:7,background:"#1a1a2e",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:(alloc/6*100)+"%",background:ac,transition:"width 0.3s"}}/></div>
+                      <div style={{flex:1,height:7,background:"#1a1a2e",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:(alloc/maxTrainPoints*100)+"%",background:ac,transition:"width 0.3s"}}/></div>
                       <div style={{fontSize:14,fontWeight:700,color:ac,minWidth:18,textAlign:"center"}}>{alloc}</div>
-                      <button onClick={()=>allocTrain(opt.stat,1)} disabled={totalAlloc>=6||atCap}
-                        style={{width:34,height:34,borderRadius:8,background:(totalAlloc>=6||atCap)?"#111":"#1a2a1a",border:"1px solid "+((totalAlloc>=6||atCap)?"#333":ac+"44"),color:(totalAlloc>=6||atCap)?"#333":ac,fontSize:18,cursor:(totalAlloc>=6||atCap)?"not-allowed":"pointer",fontFamily:"sans-serif"}}>+</button>
+                      <button onClick={()=>allocTrain(opt.stat,1)} disabled={totalAlloc>=maxTrainPoints||atCap}
+                        style={{width:34,height:34,borderRadius:8,background:(totalAlloc>=maxTrainPoints||atCap)?"#111":"#1a2a1a",border:"1px solid "+((totalAlloc>=maxTrainPoints||atCap)?"#333":ac+"44"),color:(totalAlloc>=maxTrainPoints||atCap)?"#333":ac,fontSize:18,cursor:(totalAlloc>=maxTrainPoints||atCap)?"not-allowed":"pointer",fontFamily:"sans-serif"}}>+</button>
                     </div>
                   </div>
                 );
@@ -1813,10 +1953,16 @@ function MainScreen({saveId, init, onQuit}) {
               </button>
             </div>
           ) : offseasonDone ? (
-            <div style={{background:"#1a2a1a",borderRadius:12,padding:20,border:"1px solid #00ff8844",textAlign:"center"}}>
-              <div style={{fontSize:24,marginBottom:8}}>✅</div>
-              <div style={{fontSize:15,fontWeight:700,color:"#00ff88"}}>训练已完成 · OVR {player.overall}</div>
-              <div style={{fontSize:13,color:"#888",marginTop:6}}>返回赛程页开始新赛季</div>
+            <div>
+              <div style={{background:"#1a2a1a",borderRadius:12,padding:20,border:"1px solid #00ff8844",textAlign:"center",marginBottom:14}}>
+                <div style={{fontSize:24,marginBottom:8}}>✅</div>
+                <div style={{fontSize:15,fontWeight:700,color:"#00ff88"}}>训练已完成 · OVR {player.overall}</div>
+                <div style={{fontSize:13,color:"#888",marginTop:6}}>返回赛程页开始新赛季</div>
+              </div>
+              {/* D5: retire button */}
+              <button onClick={()=>setRetireModal(true)} style={{width:"100%",padding:"12px 0",background:"#2a0d0d",border:"1px solid #ff444444",borderRadius:10,color:"#ff8888",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"sans-serif"}}>
+                🏁 宣布退役
+              </button>
             </div>
           ) : (
             <div style={{background:"#1a1a0d",borderRadius:12,padding:20,textAlign:"center",border:"1px solid #f9a01b44"}}>
@@ -2025,6 +2171,32 @@ function MainScreen({saveId, init, onQuit}) {
       )}
 
       {/* ════ DAY MODAL ════ */}
+      {/* D5: retire confirmation modal */}
+      {retireModal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
+          <div style={{background:"#111827",borderRadius:16,padding:24,width:"100%",maxWidth:380,border:"1px solid #ff444444"}}>
+            <div style={{fontSize:36,textAlign:"center",marginBottom:12}}>🏁</div>
+            <div style={{fontSize:17,fontWeight:800,marginBottom:8,textAlign:"center"}}>宣布退役？</div>
+            <div style={{fontSize:13,color:"#aaa",lineHeight:1.7,marginBottom:20}}>
+              {player.name} · {player.age} 岁 · 共 {season} 个赛季<br/>
+              生涯 OVR: {player.overall}<br/>
+              {seasonAwards && (seasonAwards.iChampion ? "✨ 至少 1 次总冠军" : "")}<br/>
+              <span style={{color:"#ff8888"}}>退役后将无法继续这个存档。建议先 ⬇备份。</span>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>{setRetired(true); setRetireModal(false); doSave();}}
+                style={{flex:1,padding:"12px 0",background:"#ff4444",border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"sans-serif"}}>
+                确认退役
+              </button>
+              <button onClick={()=>setRetireModal(false)}
+                style={{flex:1,padding:"12px 0",background:"#222",border:"none",borderRadius:10,color:"#888",fontSize:13,cursor:"pointer",fontFamily:"sans-serif"}}>
+                再想想
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {dayModal && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200}} onClick={()=>setDayModal(null)}>
           <div style={{background:"#111827",borderRadius:"18px 18px 0 0",padding:24,width:"100%",maxWidth:460}} onClick={e=>e.stopPropagation()}>
