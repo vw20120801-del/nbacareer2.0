@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Maskable: keep important content inside the 80% safe zone (centered) -->
+  <rect width="512" height="512" rx="100" fill="#f9a01b"/>
+  <circle cx="256" cy="256" r="160" fill="#d97706"/>
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#000" stroke-width="6"/>
+  <path d="M 256 96 L 256 416 M 96 256 L 416 256" stroke="#000" stroke-width="6" fill="none"/>
+  <path d="M 140 140 Q 256 256 140 372" stroke="#000" stroke-width="6" fill="none"/>
+  <path d="M 372 140 Q 256 256 372 372" stroke="#000" stroke-width="6" fill="none"/>
+</svg>
