@@ -172,6 +172,222 @@ const RENT_OPTIONS = [
     { id: "apt", name: "两居室公寓", monthly: 0.006, icon: "🏠", desc: "舒适居住" },
     { id: "luxury_apt", name: "豪华公寓", monthly: 0.015, icon: "🏢", desc: "市中心景观" },
 ];
+// ── Content Pools (added by audit-fix v2) ────────────────────────────────────
+const NAME_FIRST = ["勒布朗","凯文","斯蒂芬","詹姆斯","卡梅隆","克里斯","德里克","安东尼","保罗","卢卡","贾马尔","马库斯","特雷","扬尼斯","尼古拉","乔尔","达米安","贾森","戴米恩","达伦","布兰登","肖恩","塞德里克","特里","约翰","迈尔斯","贾莱特","特里斯坦","布雷克","扎克","克莱","贾韦尔","艾伦","德安东尼","奥斯卡","文森特","内特","雷吉","奥利弗","肯尼","坦纳","谢恩","塔伊森","贾德","阿尔文","布拉德","特雷弗","罗恩","伊曼","泰勒"];
+const NAME_LAST = ["詹姆斯","杜兰特","库里","哈登","莱昂纳德","保罗","罗斯","戴维斯","艾弗森","邓肯","诺维茨基","纳什","麦迪","皮尔斯","加索尔","安东尼","霍华德","布泽尔","罗伊","阿尔德里奇","约翰逊","史密斯","布朗","威廉斯","米勒","摩尔","马丁","汤普森","安德森","托马斯","杰克逊","罗宾逊","克拉克","刘易斯","沃克","霍尔","艾伦","扬","卡特","考尔","福斯特","米切尔","亚当斯","海伍德","欧文","阿德","纳尔逊","马尔金","奥沙利文","贝克"];
+function buildNamePool() {
+    const out = [];
+    for (let i = 0; i < NAME_FIRST.length; i++)
+        for (let j = 0; j < NAME_LAST.length; j++)
+            out.push(NAME_FIRST[i] + "·" + NAME_LAST[j]);
+    for (let i = out.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = out[i]; out[i] = out[j]; out[j] = t;
+    }
+    return out;
+}
+// Format helper: 显示为 "勒布朗·詹姆斯 (LAL)"
+function fmtPlayer(p) { return p.name + " (" + p.teamAbbr + ")"; }
+
+// Generate 30 league stars (one per team), with ovr biased by team strength seed
+function generateLeagueStars(namePool) {
+    return ALL_TEAMS.map((t, i) => {
+        const seed = t.abbr.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+        const baseOvr = 72 + (seed % 16);
+        return { name: namePool[i] || "Unknown", teamAbbr: t.abbr, ovr: baseOvr + Math.floor(Math.random() * 8), isRookie: false };
+    });
+}
+// Generate ~20 rookies, distributed across teams
+function generateRookies(namePool, startIdx) {
+    return Array(20).fill(null).map((_, i) => {
+        const t = ALL_TEAMS[Math.floor(Math.random() * ALL_TEAMS.length)];
+        return { name: namePool[startIdx + i] || ("新秀" + i), teamAbbr: t.abbr, ovr: 70 + Math.floor(Math.random() * 14), isRookie: true };
+    });
+}
+// Extract player's finals stats from playoff bracket
+function calcFinalsAvg(bracket, myTeamAbbr) {
+    if (!bracket || !bracket.finals) return null;
+    const f = bracket.finals;
+    const isMyMatch = f.teamA.abbr === myTeamAbbr || f.teamB.abbr === myTeamAbbr;
+    if (!isMyMatch) return null;
+    const played = f.games.filter(g => g.status !== "upcoming" && g.stats && !g.stats.rested);
+    if (played.length === 0) return null;
+    const t = played.reduce((a, g) => ({ pts: a.pts + g.stats.pts, ast: a.ast + g.stats.ast, reb: a.reb + g.stats.reb }), { pts: 0, ast: 0, reb: 0 });
+    return { gamesPlayed: played.length, avgPts: t.pts / played.length, avgAst: t.ast / played.length, avgReb: t.reb / played.length };
+}
+
+// ── Commentary Pools (replaces hard-coded lines in localCommentary) ──────────
+const COMMENTARY = {
+    draft: [
+        "灯光聚焦在那一刻，专员走上台——这个名字，从今天起将属于NBA！",
+        "现场掌声雷动，这位新秀终于等到了属于他的时刻，职业生涯正式开启！",
+        "多少年的汗水与努力，在这一声宣布中化为现实，梦想照进现实！",
+        "选秀大厅沸腾了，这位新秀带着渴望走上舞台，迎接他崭新的旅程！",
+        "这是每个篮球少年的梦想——被NBA选中的那一刻，时间仿佛静止了。",
+        "镜头给到家人，泪光闪烁——这一刻，所有的牺牲都值了。",
+        "经纪人激动地拥抱了他，那一刻他知道，自己真的做到了。",
+        "解说员的声音穿透整个大厅：「这是一个未来之星诞生的瞬间！」",
+        "他深吸一口气，戴上球队帽子，从此与这支队伍命运相连。",
+        "球探报告早就盛传他的天赋，今天，终于到了兑现的时候。",
+        "看台上家乡的旗帜挥舞着，这是属于他家乡的荣光。",
+        "无数球迷在屏幕前屏住呼吸——这个顺位，意味着球队的未来。",
+        "他握紧拳头，朝家人方向点头致意。十年的努力，今夜兑现。",
+        "现场记者蜂拥而上，闪光灯织成一片白色海洋。",
+        "他穿过欢呼的人群走向舞台，脚步坚定，眼神发光。",
+    ],
+    winGeneric: [
+        "{pts}分{ast}助攻{reb}篮板，全面的表现带队拿下！今晚他就是球场上最亮的那颗星。",
+        "关键时刻挺身而出，{pts}分的表现振奋人心，这场胜利来得及时！",
+        "场上的每一次突破、每一次分球都恰到好处。{pts}分{ast}助，今晚无可挑剔。",
+        "球迷的呐喊在他每次出手时达到顶峰，{pts}分收官，漂亮！",
+        "一攻一防都交出了满意答卷，{pts}分是对努力最好的回报，球队士气大振！",
+        "半场打得有些挣扎，但下半场彻底爆发，{pts}分逆转了颓势，这才是真正的球星气质！",
+        "对手的针对性防守完全失效，{pts}分的输出说明他已经进入了状态。",
+        "末节关键球他站了出来，{pts}分的最后一分至关重要。",
+        "节奏完全在他手中，{pts}分{ast}助看上去举重若轻。",
+        "全场都在喊他的名字，{pts}分配上{reb}个篮板，这是统治级表现。",
+        "今晚他用脚步征服了对手，{pts}分外加多次造犯规。",
+        "球队的领袖气质完全展现——{pts}分、{ast}次助攻、{reb}个篮板。",
+        "队友们在场上拥抱了他，{pts}分的表现配得上这场胜利。",
+        "防守端的扑救让对手挫败，进攻端{pts}分让对手绝望。",
+        "客场球迷喝倒彩越响，他得分越多——{pts}分的回答简单直接。",
+        "教练在场边竖起大拇指，{pts}分的发挥让全队跟着兴奋。",
+        "对手赛后采访只能摇头：「他今晚不可阻挡。」{pts}分说明一切。",
+        "比赛被他打成了表演秀，{pts}分{ast}助，这就是球星的标准模板。",
+    ],
+    lossGeneric: [
+        "{pts}分{reb}篮板的个人数据说得过去，但球队整体状态欠佳，这场失利需要好好复盘。",
+        "今晚运气不站他这边，几次关键出手铁了，{pts}分没能帮助球队翻盘。",
+        "输球总是痛苦的，{pts}分的贡献有目共睹，但团队配合还需磨合。",
+        "进攻端今晚遭遇顽强防守，{pts}分是在重重压迫下打出来的，下一场调整策略。",
+        "差一口气，{pts}分和{ast}助攻没能换来胜利，但过程中的拼劲让人动容。",
+        "对手今晚状态太火热，{pts}分的努力被对方更稳的发挥压住。",
+        "末节心态有些急，几次仓促出手让分差越拉越大，最终{pts}分。",
+        "板凳出场缺乏火力支援，主力扛着比赛打到最后，{pts}分独木难支。",
+        "裁判的几个争议判罚影响了节奏，{pts}分背后是隐隐的不甘。",
+        "客场作战遇到糟糕的氛围，{pts}分已是顽强一战。",
+        "{pts}分但效率不高，今晚的手感始终没找回来。",
+        "球队失误太多，{pts}分的产出被对方更稳健的进攻抵消。",
+        "教练赛后只说了一句：「我们让胜利溜走了。」{pts}分包含太多遗憾。",
+        "对手的领袖打疯了，{pts}分对决对方更大的爆发，最终落败。",
+        "下半场被对手提速冲垮，{pts}分没能拖住对方的浪潮。",
+    ],
+    winShooter: [
+        "手感火热，{pts}分全靠准绝！连续几个三分球命中，把比赛直接打成了单方面屠杀。",
+        "「今晚手感来了」——他赛后平静地说。{pts}分的三分大秀让全场沸腾，对手毫无还手之力。",
+        "他的三分像下雨一样，{pts}分中至少一半是空切接球三分。",
+        "对手包夹也防不住，{pts}分诠释了什么叫顶级射手的统治力。",
+        "底角、弧顶、超远——{pts}分覆盖了所有射程，对方教练叫了两个暂停都没用。",
+        "{pts}分里有 5 记三分，节奏感无人能挡。",
+        "防守人换了一茬又一茬，{pts}分照拿不误。",
+    ],
+    lossShooter: [
+        "今晚手感不顺，{pts}分来得很艰难，但仍然是队内最高分，下一场重新校准节奏。",
+        "三分球今晚铁框了，{pts}分大多靠突破撕开来的，但整体效率偏低。",
+        "对手专门派了大个子贴他，{pts}分的出手次数远多于平时，命中率打折。",
+        "射手的低潮期来了，{pts}分背后是连续几个错失的关键三分。",
+    ],
+    winPG: [
+        "{ast}次助攻串联起整个进攻体系，{pts}分只是附带品，今晚他是真正的球场指挥官！",
+        "阅读比赛的眼光无与伦比！{ast}助{pts}分，每一次传球都像是预判了三步之后的走势。",
+        "无球跑动、挡拆掩护、空切传球——他像总教练在场上下棋，{ast}次助攻。",
+        "{ast}助让队友的得分变得轻松，自己再补{pts}分，完美的控卫之夜。",
+        "对手主防被他玩弄于鼓掌之中，{ast}次助攻里至少一半是空位大空篮。",
+        "他像主控大师在指挥乐队，{pts}分{ast}助让全队进入流畅模式。",
+        "{ast}次助攻里有几个想象力极强的传球，让看台上球迷连连惊呼。",
+    ],
+    lossPG: [
+        "组织端今晚有些失误，不过{ast}次助攻和{pts}分的贡献仍然可圈可点，系列赛还长着呢。",
+        "对方专盯他持球，{ast}助攻打了八折，{pts}分也没能拯救球队。",
+        "节奏被对手破坏，{ast}次助攻里几次失误被反击得分。",
+        "今晚的执行有问题，{pts}分{ast}助没能转化为胜利，需要赛后开会复盘。",
+    ],
+    winDefender: [
+        "防守端的统治力让对手头疼不已，加上{pts}分的贡献，今晚是完整的双向表演！",
+        "他的防守压力让对方核心球员投不进，{pts}分是攻防一体的代表作。",
+        "对手核心被他锁死，{pts}分是顺势打出的——这就是双向球员的价值。",
+        "锁防、抢断、补防——他像章鱼一样无处不在，{pts}分只是顺带的奖励。",
+        "他的扑救改变了几个关键回合，{pts}分背后是更多场外效益。",
+    ],
+    lossDefender: [
+        "虽然败了，但防守端的努力有目共睹，下次进攻端需要更多支撑。",
+        "他防住了对方核心，但队友进攻端发挥不佳，{pts}分独木难支。",
+        "防守的拼劲不缺，可惜进攻端{pts}分不足以撕开对方防线。",
+    ],
+    poffWin: [
+        "季后赛的舞台让他越战越勇！{pts}分{ast}助攻的统治级表现，直接封锁了对手的反击希望。",
+        "这就是大心脏！关键时刻他一次次站出来，{pts}分{reb}篮板，率队挺进下一轮！",
+        "系列赛的气势完全在我方！{pts}分的爆发表现让对手教练组面面相觑，换谁都防不住。",
+        "客场嘘声越响，他打得越来劲——{pts}分的回答只有「绝杀」二字。",
+        "末节他独取大段，{pts}分背后是这场系列赛的胜负手。",
+        "他在抢七的舞台上交出{pts}分，从此「大心脏」标签彻底坐实。",
+        "对手教练叫暂停时面色铁青，{pts}分的得分手段让他无解。",
+        "季后赛升级版本的他出现了——{pts}分{ast}助打出常规赛+30% 的状态。",
+        "队友赛后采访：「我们都知道关键球该给谁。」{pts}分回答了一切。",
+        "全场起立鼓掌，{pts}分的最后一记得分仿佛把整个球馆点燃。",
+        "防守端他也打满全场，{pts}分配上多次造犯规和封盖。",
+        "媒体已经开始讨论 FMVP——{pts}分{ast}助是他的入场券。",
+    ],
+    poffLoss: [
+        "季后赛就是残酷，{pts}分{ast}助攻虽然拼尽全力，但球队整体表现差强人意，系列赛悬念犹存。",
+        "这场失利很痛，他的{pts}分在队内最高，但孤掌难鸣，下一场必须找回状态。",
+        "季后赛不相信眼泪，{pts}分没能换来胜利，休息室里一片沉默，重新出发。",
+        "对方核心打疯了，{pts}分没能压住对方的火力。",
+        "几次关键失误让分差被拉开，{pts}分背后是整场的不顺。",
+        "客场被对方主场气势吞噬，{pts}分孤独地诠释了「英雄末路」。",
+        "末节心态崩了，{pts}分里包含太多无奈的强投。",
+        "对方防守端针对性研究，{pts}分是他在重压下挤出来的。",
+        "教练采访只说：「我们没准备好。」{pts}分照样心痛。",
+    ],
+    relGood: [
+        "更衣室里气氛融洽，训练结束后大家常常一起留下投篮，这种默契是球队凝聚力的来源。",
+        "双方关系建立在相互尊重上，每次战术会议都能坦诚交流，这在联盟里并不多见。",
+        "有几次深夜训练后，两人在球馆门口聊了很久，那种惺惺相惜的感觉让人难忘。",
+        "媒体见面会上彼此相视一笑，这种默契不是装出来的。",
+        "私下也常约一起打高尔夫，关系超越了职业范畴。",
+        "客场遇到难题时，两人总能站到一起，这种支持很难得。",
+        "训练馆里他们常常是最后离开的两个人。",
+        "采访里他多次公开表达对对方的感谢，这种关系在 NBA 是稀缺品。",
+    ],
+    relBad: [
+        "更衣室里的气氛最近有些沉重，双方的分歧在一场失利后彻底爆发，私下已经几乎不说话。",
+        "管理层对目前的状态并不满意，有消息说他们已经在悄悄接触其他球队，交易的风声越来越近。",
+        "两人的关系说不上好也说不上坏，职业态度维持着表面的平静，但深层的分歧始终存在。",
+        "更衣室里几次摔战术板的争吵让所有人都很尴尬。",
+        "公开场合两人客气，私下几乎不再交流，气氛冷到冰点。",
+        "媒体捕捉到了几个意味深长的眼神，关于裂痕的猜测开始发酵。",
+        "训练时分开练投篮已经成为习惯，谁也不主动开口。",
+        "经纪人最近频繁约见其他球队，所有人都心知肚明。",
+    ],
+    relNeutral: [
+        "职业关系，互相尊重，保持着应有的距离和信任。",
+        "彼此都是专业人士，把工作做好就是最大的尊重。",
+        "公开场合礼貌客气，私下交流不多，但也没什么矛盾。",
+        "保持着 NBA 圈里典型的同事关系，不远不近。",
+    ],
+    trade: [
+        "消息在更衣室迅速传开——他递交了交易申请。管理层表情凝重，而队友们则各有心思，这个赛季注定不平静。",
+        "经纪人确认了这个消息：交易申请已经正式提交。电话那头沉默了很久，最终只说了一句：「我们会认真考虑」。",
+        "这个决定震动了整个球队，媒体蜂拥而至，关于下家的猜测铺天盖地，而他只是平静地出现在训练场上。",
+        "他在赛前更衣室宣布了这个决定，队友们的表情五味杂陈。",
+        "管理层连夜召开紧急会议，关于他的未来，所有人都没了底。",
+        "ESPN 头条标题已经挂上：「明星球员要求交易，下一站会是哪里？」",
+        "他在自传发布会上提到了这件事，记者们瞬间都从座位上跳了起来。",
+        "球迷请愿书已经堆成山——他们不希望他走，但决定权在他和管理层手里。",
+    ],
+    injuredPrefix: [
+        "带伤坚持出战，精神可嘉！",
+        "膝盖明显有问题但他没下场，",
+        "拉着绷带打满了关键时段，",
+        "队医都建议下场但他拒绝了，",
+        "强忍着不适完成了比赛，",
+    ],
+};
+function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function fillTemplate(tpl, vars) {
+    return tpl.replace(/\{(\w+)\}/g, (m, k) => vars[k] !== undefined ? vars[k] : m);
+}
+// ── End Content Pools ────────────────────────────────────────────────────────
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function loadSaves() { try {
     const r = localStorage.getItem(STORAGE_KEY);
@@ -320,8 +536,10 @@ function generatePotential(pos, arc) {
     Object.keys(b).forEach(k => {
         // Base floor 85, archetype/position bonus added, then random 0-14 on top
         // This gives true 85-99 range with archetype skewing higher in relevant stats
-        const base = 85 + Math.max(0, b[k]);
-        const roll = Math.floor(Math.random() * (100 - base + 1)); // 0 to (99-base)
+        // base preserves negative bonus (e.g. C 的 speed b[k] = -5 → base = 80)
+        // Floor at 70 so no stat can drop below "minimum NBA caliber" ceiling.
+        const base = Math.max(70, 85 + b[k]);
+        const roll = Math.floor(Math.random() * (100 - base + 1));
         c[k] = Math.min(99, base + roll);
     });
     return c;
@@ -341,11 +559,11 @@ function generateRegularSeason(myTeam, startYear) {
     const games = [];
     let date = new Date(startYear, 9, 22);
     let count = 0;
+    // B6: guarantee 82 games — old code had a date > April 13 break that
+    // occasionally cut the season short (~5% of runs) due to random gap variance.
     while (count < 82) {
         const gap = Math.random() < 0.4 ? 1 : Math.random() < 0.6 ? 2 : 3;
         date = new Date(date.getTime() + gap * 86400000);
-        if (date > new Date(startYear + 1, 3, 13))
-            break;
         const opp = opponents[count % opponents.length];
         games.push({ id: "r_" + startYear + "_" + count, date: date.toISOString(), opp: opp.abbr, home: Math.random() > 0.5, status: "upcoming", stats: null });
         count++;
@@ -369,125 +587,39 @@ function aiCall(prompt) {
 function localCommentary(prompt) {
     const p = prompt || "";
     // 选秀解说
-    if (p.includes("选秀")) {
-        const t = extractText(p, ["被", "选中"], ["以第", "顺位"]);
-        const picks = [
-            `灯光聚焦在那一刻，专员走上台——这个名字，从今天起将属于NBA！`,
-            `现场掌声雷动，这位新秀终于等到了属于他的时刻，职业生涯正式开启！`,
-            `多少年的汗水与努力，在这一声宣布中化为现实，梦想照进现实！`,
-            `选秀大厅沸腾了，这位新秀带着渴望走上舞台，迎接他崭新的旅程！`,
-            `这是每个篮球少年的梦想——被NBA选中的那一刻，时间仿佛静止了。`,
-        ];
-        return picks[Math.floor(Math.random() * picks.length)];
-    }
-    // 人际关系故事
+    if (p.includes("选秀")) return pickRandom(COMMENTARY.draft);
+    // 人际关系
     if (p.includes("关系") || p.includes("主教练") || p.includes("总经理") || p.includes("老板") || p.includes("更衣室")) {
-        const isGood = p.includes("融洽");
-        const isBad = p.includes("紧张");
-        if (isGood) {
-            const g = [
-                "更衣室里气氛融洽，训练结束后大家常常一起留下投篮，这种默契是球队凝聚力的来源。",
-                "双方关系建立在相互尊重上，每次战术会议都能坦诚交流，这在联盟里并不多见。",
-                "有几次深夜训练后，两人在球馆门口聊了很久，那种惺惺相惜的感觉让人难忘。",
-            ];
-            return g[Math.floor(Math.random() * g.length)];
-        }
-        if (isBad) {
-            const b = [
-                "更衣室里的气氛最近有些沉重，双方的分歧在一场失利后彻底爆发，私下已经几乎不说话。",
-                "管理层对目前的状态并不满意，有消息说他们已经在悄悄接触其他球队，交易的风声越来越近。",
-                "两人的关系说不上好也说不上坏，职业态度维持着表面的平静，但深层的分歧始终存在。",
-            ];
-            return b[Math.floor(Math.random() * (b.length - 1))];
-        }
-        return "职业关系，互相尊重，保持着应有的距离和信任。";
+        if (p.includes("融洽")) return pickRandom(COMMENTARY.relGood);
+        if (p.includes("紧张")) return pickRandom(COMMENTARY.relBad);
+        return pickRandom(COMMENTARY.relNeutral);
     }
     // 交易申请
-    if (p.includes("申请交易")) {
-        const trades = [
-            "消息在更衣室迅速传开——他递交了交易申请。管理层表情凝重，而队友们则各有心思，这个赛季注定不平静。",
-            "经纪人确认了这个消息：交易申请已经正式提交。电话那头沉默了很久，最终只说了一句：「我们会认真考虑」。",
-            "这个决定震动了整个球队，媒体蜂拥而至，关于下家的猜测铺天盖地，而他只是平静地出现在训练场上。",
-        ];
-        return trades[Math.floor(Math.random() * trades.length)];
-    }
-    // 季后赛解说
-    if (p.includes("季后赛")) {
-        const pts = extractNum(p, "分");
-        const ast = extractNum(p, "助");
-        const reb = extractNum(p, "篮");
-        const isWin = p.includes("胜");
-        const win_lines = [
-            `季后赛的舞台让他越战越勇！${pts}分${ast}助攻的统治级表现，直接封锁了对手的反击希望。`,
-            `这就是大心脏！关键时刻他一次次站出来，${pts}分${reb}篮板，率队挺进下一轮！`,
-            `系列赛的气势完全在我方！${pts}分的爆发表现让对手教练组面面相觑，换谁都防不住。`,
-        ];
-        const loss_lines = [
-            `季后赛就是残酷，${pts}分${ast}助攻虽然拼尽全力，但球队整体表现差强人意，系列赛悬念犹存。`,
-            `这场失利很痛，他的${pts}分在队内最高，但孤掌难鸣，下一场必须找回状态。`,
-            `季后赛不相信眼泪，${pts}分没能换来胜利，休息室里一片沉默，重新出发。`,
-        ];
-        const lines = isWin ? win_lines : loss_lines;
-        return lines[Math.floor(Math.random() * lines.length)];
-    }
-    // 普通比赛解说
+    if (p.includes("申请交易")) return pickRandom(COMMENTARY.trade);
+    // 解析数据
     const pts = extractNum(p, "分");
     const ast = extractNum(p, "助");
     const reb = extractNum(p, "篮");
+    const vars = { pts, ast, reb };
     const isWin = p.includes("胜");
     const isInjured = p.includes("带伤");
-    // Archetype-specific lines
-    const arcLines = {
-        "射手": isWin
-            ? [`手感火热，${pts}分全靠准绝！连续几个三分球命中，把比赛直接打成了单方面屠杀。`,
-                `"今晚手感来了"——他赛后平静地说。${pts}分的三分大秀让全场沸腾，对手毫无还手之力。`]
-            : [`今晚手感不顺，${pts}分来得很艰难，但仍然是队内最高分，下一场重新校准节奏。`],
-        "控卫": isWin
-            ? [`${ast}次助攻串联起整个进攻体系，${pts}分只是附带品，今晚他是真正的球场指挥官！`,
-                `阅读比赛的眼光无与伦比！${ast}助${pts}分，每一次传球都像是预判了三步之后的走势。`]
-            : [`组织端今晚有些失误，不过${ast}次助攻和${pts}分的贡献仍然可圈可点，系列赛还长着呢。`],
-        "防守": isWin
-            ? [`防守端的统治力让对手头疼不已，加上${pts}分的贡献，今晚是完整的双向表演！`]
-            : [`虽然败了，但防守端的努力有目共睹，下次进攻端需要更多支撑。`],
-    };
-    // Match archetype from prompt
-    let arcKey = null;
-    if (p.includes("射手") || p.includes("投篮"))
-        arcKey = "射手";
-    else if (p.includes("控卫") || p.includes("组织"))
-        arcKey = "控卫";
-    else if (p.includes("防守") || p.includes("双向"))
-        arcKey = "防守";
-    if (arcKey && arcLines[arcKey]) {
-        const pool = arcLines[arcKey];
-        return pool[Math.floor(Math.random() * pool.length)];
+    const isPoff = p.includes("季后赛");
+    if (isPoff) {
+        return fillTemplate(pickRandom(isWin ? COMMENTARY.poffWin : COMMENTARY.poffLoss), vars);
     }
-    // Generic commentary
-    const win_generic = [
-        `${pts}分${ast}助攻${reb}篮板，全面的表现带队拿下！今晚他就是球场上最亮的那颗星。`,
-        `关键时刻挺身而出，${pts}分的表现振奋人心，这场胜利来得及时！`,
-        `场上的每一次突破、每一次分球都恰到好处。${pts}分${ast}助，今晚无可挑剔。`,
-        `球迷的呐喊在他每次出手时达到顶峰，${pts}分收官，漂亮！`,
-        `一攻一防都交出了满意答卷，${pts}分是对努力最好的回报，球队士气大振！`,
-        `半场打得有些挣扎，但下半场彻底爆发，${pts}分逆转了颓势，这才是真正的球星气质！`,
-    ];
-    const loss_generic = [
-        `${pts}分${reb}篮板的个人数据说得过去，但球队整体状态欠佳，这场失利需要好好复盘。`,
-        `今晚运气不站他这边，几次关键出手铁了，${pts}分没能帮助球队翻盘。`,
-        `输球总是痛苦的，${pts}分的贡献有目共睹，但团队配合还需磨合。`,
-        `进攻端今晚遭遇顽强防守，${pts}分是在重重压迫下打出来的，下一场调整策略。`,
-        `差一口气，${pts}分和${ast}助攻没能换来胜利，但过程中的拼劲让人动容。`,
-    ];
-    const injured_prefix = isInjured ? "带伤坚持出战，精神可嘉！" : "";
-    const pool = isWin ? win_generic : loss_generic;
-    return injured_prefix + pool[Math.floor(Math.random() * pool.length)];
+    // 比赛解说 — 按 archetype 选池
+    let pool = null;
+    if (p.includes("射手") || p.includes("投篮")) pool = isWin ? COMMENTARY.winShooter : COMMENTARY.lossShooter;
+    else if (p.includes("控卫") || p.includes("组织")) pool = isWin ? COMMENTARY.winPG : COMMENTARY.lossPG;
+    else if (p.includes("防守") || p.includes("双向")) pool = isWin ? COMMENTARY.winDefender : COMMENTARY.lossDefender;
+    if (pool) return (isInjured ? pickRandom(COMMENTARY.injuredPrefix) : "") + fillTemplate(pickRandom(pool), vars);
+    // 通用
+    const out = fillTemplate(pickRandom(isWin ? COMMENTARY.winGeneric : COMMENTARY.lossGeneric), vars);
+    return (isInjured ? pickRandom(COMMENTARY.injuredPrefix) : "") + out;
 }
 function extractNum(str, after) {
     const m = str.match(new RegExp('(\\d+)' + after));
     return m ? parseInt(m[1]) : 0;
-}
-function extractText(str, startWords, endWords) {
-    return str.substring(0, 50);
 }
 // ── StatBar ───────────────────────────────────────────────────────────────────
 function StatBar({ label, value, ceiling, max = 99, color = "#FDB927" }) {
@@ -735,8 +867,9 @@ function SeriesCard({ series, myTeamAbbr, teamColor, ac, onSimGame, simming }) {
     const iLost = done && myTeam && series.winner !== myTeamAbbr;
     if (!isMyMatch) {
         // Other series — compact
-        const aT = ALL_TEAMS.find(t => t.abbr === series.teamA.abbr) || series.teamA;
-        const bT = ALL_TEAMS.find(t => t.abbr === series.teamB.abbr) || series.teamB;
+        // B18: use series.teamA/teamB directly — they're already complete team objects.
+        const aT = series.teamA;
+        const bT = series.teamB;
         return (React.createElement("div", { style: { background: "#111827", borderRadius: 8, padding: "8px 12px", marginBottom: 6, border: "1px solid #ffffff0d", display: "flex", justifyContent: "space-between", alignItems: "center" } },
             React.createElement("div", { style: { fontSize: 12, color: series.winner === aT.abbr ? "#00ff88" : "#aaa", fontWeight: series.winner === aT.abbr ? 700 : 400 } }, aT.abbr),
             React.createElement("div", { style: { fontSize: 12, color: "#555" } },
@@ -768,9 +901,9 @@ function SeriesCard({ series, myTeamAbbr, teamColor, ac, onSimGame, simming }) {
                 React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: "#aaa" } }, oppTeam.abbr),
                 React.createElement("div", { style: { fontSize: 10, color: "#888" } }, oppTeam.city || ""))),
         React.createElement("div", { style: { display: "flex", gap: 4, marginBottom: 10, justifyContent: "center" } }, series.games.slice(0, myWins + oppWins + 1).slice(0, 7).map((g, gi) => {
+            // B4: removed two dead-code variables (iWonThisGame, myWonGame) whose values
+            // were never read. Color logic is below in the createElement call directly.
             const isPlayed = g.status !== "upcoming";
-            const iWonThisGame = isPlayed && ((series.teamA.abbr === myTeamAbbr && g.status === "won") || (series.teamB.abbr === myTeamAbbr && g.status === "lost" ? "lost" : "won") === g.status && series.teamA.abbr !== myTeamAbbr ? false : g.status === "won");
-            const myWonGame = isPlayed && series.games[gi].status === "won" ? series.teamA.abbr === myTeamAbbr : false;
             return (React.createElement("div", { key: gi, style: { width: 24, height: 24, borderRadius: 4, background: !isPlayed ? "#1a1a2e" : g.status === "won" ? (series.teamA.abbr === myTeamAbbr ? "#00ff8855" : "#ff444455") : (series.teamA.abbr === myTeamAbbr ? "#ff444455" : "#00ff8855"), border: "1px solid #ffffff11", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#888" } }, !isPlayed ? "·" : g.status === "won" ? (series.teamA.abbr === myTeamAbbr ? "W" : "L") : (series.teamA.abbr === myTeamAbbr ? "L" : "W")));
         })),
         !done && (React.createElement("button", { onClick: onSimGame, disabled: simming, style: { width: "100%", padding: "10px 0", background: teamColor, border: "1px solid " + ac, borderRadius: 10, color: ac, fontWeight: 700, fontSize: 13, cursor: simming ? "not-allowed" : "pointer" } }, simming ? "模拟中..." : "▶ 模拟第" + (myWins + oppWins + 1) + "场"))));
@@ -827,45 +960,92 @@ function PlayoffView({ bracket, myTeam, onSimGame, simming, onOffseason, ac, nar
 const TEAMMATE_NAMES = ["贾马尔", "德里克", "泰勒", "马库斯", "凯尔", "乔丹", "坦纳", "迈尔斯", "奥利弗", "肖恩", "布莱克", "达文特", "雷吉", "特雷", "内特"];
 const TEAMMATE_ROLES = ["首发控卫", "首发得分后卫", "首发小前锋", "首发大前锋", "首发中锋", "第六人", "轮换得分手", "防守专家", "组织替补", "体能轮换"];
 function generateTeammates() {
-    return Array(5).fill(null).map((_, i) => ({
+    // B20: bumped from 5 to 10 — uses full TEAMMATE_ROLES list (no role wasted).
+    return Array(10).fill(null).map((_, i) => ({
         id: i,
         name: TEAMMATE_NAMES[Math.floor(Math.random() * TEAMMATE_NAMES.length)] + "·" + ["史密斯", "约翰逊", "威廉斯", "布朗", "戴维斯", "马丁", "汤普森", "安德森", "托马斯", "杰克逊"][Math.floor(Math.random() * 10)],
         role: TEAMMATE_ROLES[i] || TEAMMATE_ROLES[Math.floor(Math.random() * TEAMMATE_ROLES.length)],
-        rapport: Math.floor(Math.random() * 40) + 40, // 40-80 initial
+        rapport: Math.floor(Math.random() * 40) + 40,
         ovr: Math.floor(Math.random() * 25) + 70,
     }));
 }
-function generateSeasonAwards(playerName, teamAbbr, teamName, avg, ovr, wins, season, playoffBracket) {
-    const stars = [...ALL_TEAMS.map(t => t.city + " " + t.name)].sort(() => Math.random() - 0.5);
-    const starNames = stars.map(s => s + " 球员");
-    const pick = (arr, n) => arr.slice(0, n);
-    const isGoodSeason = avg.pts > 20 && wins > 41;
+function generateSeasonAwards(playerName, teamAbbr, teamName, avg, ovr, wins, season, playoffBracket, finalsAvg) {
+    // C: rewritten. Uses a name pool of ~2500 transliterated names. League stars
+    // are 1 per team (ovr biased by team strength seed). Rookies are 20 random.
+    // Awards picked by ovr ranking (+ player injected). FMVP requires player
+    // actually played in the finals AND averaged >= 20 pts.
+    const pool = buildNamePool();
+    const stars = generateLeagueStars(pool);
+    const rookies = generateRookies(pool, ALL_TEAMS.length);
+
     const isMVPCandidate = avg.pts > 25 && avg.ast > 5 && wins > 50 && ovr > 85;
     const isDPOY = avg.stl > 1.5 && avg.blk > 1.2 && ovr > 82;
-    const isRookie = season === 1;
-    // Get actual champion from bracket
-    const actualChampAbbr = (playoffBracket === null || playoffBracket === void 0 ? void 0 : playoffBracket.champion) || null;
+    const isGoodSeason = avg.pts > 20 && wins > 41;
+    const isRookieSeason = season === 1;
+
+    // Inject player as a "virtual star"
+    const me = { name: playerName, teamAbbr, ovr, isRookie: isRookieSeason };
+    const allPlayers = [...stars, me];
+
+    // Sort by ovr desc, with player's actual stats giving a small bump if isGoodSeason
+    const sortedByOvr = [...allPlayers].sort((a, b) => {
+        const aBoost = a.name === playerName && isGoodSeason ? 5 : 0;
+        const bBoost = b.name === playerName && isGoodSeason ? 5 : 0;
+        return (b.ovr + bBoost) - (a.ovr + aBoost);
+    });
+
+    // MVP: by sortedByOvr[0], unless player is MVP candidate
+    const mvp = isMVPCandidate ? fmtPlayer(me) : fmtPlayer(sortedByOvr[0]);
+
+    // All-NBA 1/2/3 teams from sortedByOvr
+    const allNBA1 = sortedByOvr.slice(0, 5).map(fmtPlayer);
+    const allNBA2 = sortedByOvr.slice(5, 10).map(fmtPlayer);
+    const allNBA3 = sortedByOvr.slice(10, 15).map(fmtPlayer);
+
+    // Defense: independent shuffle so it doesn't duplicate All-NBA
+    const defShuffled = [...allPlayers].sort((a, b) => {
+        const aBoost = a.name === playerName && isDPOY ? 8 : 0;
+        const bBoost = b.name === playerName && isDPOY ? 8 : 0;
+        return (b.ovr * 0.7 + bBoost + Math.random() * 10) - (a.ovr * 0.7 + aBoost + Math.random() * 10);
+    });
+    const allDef1 = defShuffled.slice(0, 5).map(fmtPlayer);
+    const allDef2 = defShuffled.slice(5, 10).map(fmtPlayer);
+    const dpoy = isDPOY ? fmtPlayer(me) : fmtPlayer(defShuffled[0]);
+
+    // Rookies: pool from generated rookies + player if it's their rookie year
+    const rookieList = isRookieSeason ? [me, ...rookies] : rookies;
+    rookieList.sort((a, b) => b.ovr - a.ovr);
+    const allRookie1 = rookieList.slice(0, 5).map(fmtPlayer);
+    const allRookie2 = rookieList.slice(5, 10).map(fmtPlayer);
+
+    // Champion
+    const actualChampAbbr = playoffBracket ? playoffBracket.champion : null;
     const actualChampTeam = actualChampAbbr ? (ALL_TEAMS.find(t => t.abbr === actualChampAbbr) || null) : null;
-    const championName = actualChampTeam ? actualChampTeam.city + " " + actualChampTeam.name : starNames[0].replace(" 球员", "");
-    // Player won championship?
+    const championName = actualChampTeam ? actualChampTeam.city + " " + actualChampTeam.name : "—";
     const iChampion = actualChampAbbr === teamAbbr;
-    // FMVP: if player's team won, check if player was MVP-caliber; otherwise random finals player
-    const fmvp = iChampion && isMVPCandidate ? playerName : (iChampion ? playerName : starNames[0]);
-    const mvp = isMVPCandidate ? playerName : starNames[0];
+
+    // FMVP: needs (1) player's team won, (2) player played finals, (3) finals avg >= 20pts
+    let fmvp;
+    if (iChampion && finalsAvg && finalsAvg.gamesPlayed > 0 && finalsAvg.avgPts >= 20) {
+        fmvp = fmtPlayer(me);
+    } else if (iChampion) {
+        // Player's team won but player wasn't the star — pick their team's star
+        const teamStar = stars.find(s => s.teamAbbr === teamAbbr);
+        fmvp = teamStar ? fmtPlayer(teamStar) : fmtPlayer(me);
+    } else if (actualChampAbbr) {
+        const champStar = stars.find(s => s.teamAbbr === actualChampAbbr);
+        fmvp = champStar ? fmtPlayer(champStar) : "—";
+    } else {
+        fmvp = "—";
+    }
+
+    const bestCoach = ["史蒂夫·科尔", "泰隆·卢", "迈克·布登霍尔泽", "埃里克·斯波斯特拉", "里克·卡莱尔", "格雷格·波波维奇", "扬尼斯·阿代托昆博", "蒙蒂·威廉斯", "迈克·马龙", "贾森·基德"][Math.floor(Math.random() * 10)];
+
     return {
-        mvp,
-        allNBA1: isGoodSeason ? [playerName, ...pick(starNames, 4)] : pick(starNames, 5),
-        allNBA2: pick(starNames.slice(5), 5),
-        allNBA3: pick(starNames.slice(10), 5),
-        allDef1: isDPOY ? [playerName, ...pick(starNames, 4)] : pick(starNames, 5),
-        allDef2: pick(starNames.slice(5), 5),
-        allRookie1: isRookie ? [playerName, ...pick(starNames, 4)] : pick(starNames, 5),
-        allRookie2: isRookie ? pick(starNames.slice(5), 5) : pick(starNames.slice(1), 5),
-        dpoy: isDPOY ? playerName : starNames[0],
-        bestCoach: ["史蒂夫·科尔", "泰隆·卢", "迈克·布登霍尔泽", "埃里克·斯波斯特拉", "里克·卡莱尔", "格雷格·波波维奇", "扬尼斯·阿代托昆博"][Math.floor(Math.random() * 7)],
-        champion: championName,
-        iChampion,
-        fmvp,
+        mvp, allNBA1, allNBA2, allNBA3,
+        allDef1, allDef2, dpoy,
+        allRookie1, allRookie2,
+        bestCoach, champion: championName, iChampion, fmvp,
     };
 }
 function MainScreen({ saveId, init, onQuit }) {
@@ -940,8 +1120,14 @@ function MainScreen({ saveId, init, onQuit }) {
         setSaveMsg("已保存 ✓");
         setTimeout(() => setSaveMsg(""), 2000);
     }, [player, team, season, phase, regularGames, playoffBracket, playoffRound, injury, resting, injuryLog, relationships, contract, brands, offseasonDone, wins, played, saveId, contractOffer]);
-    useEffect(() => { if (played.length > 0)
-        doSave(); }, [regularGames, playoffBracket]);
+    // B15: debounce auto-save — was saving on every game, now coalesces rapid changes.
+    const _saveTimerRef = useRef(null);
+    useEffect(() => {
+        if (played.length === 0) return;
+        if (_saveTimerRef.current) clearTimeout(_saveTimerRef.current);
+        _saveTimerRef.current = setTimeout(() => { doSave(); }, 500);
+        return () => { if (_saveTimerRef.current) clearTimeout(_saveTimerRef.current); };
+    }, [regularGames, playoffBracket]);
     function checkNewInjury() {
         const chance = 0.02; // ~1-2 injuries per 82 games, many seasons injury-free
         if (Math.random() < chance) {
@@ -1017,8 +1203,14 @@ function MainScreen({ saveId, init, onQuit }) {
             }
             const res = simOneGame(curInj, isResting);
             newReg = newReg.map(s => s.id === g.id ? Object.assign(Object.assign({}, s), { status: res.win ? "won" : "lost", stats: res }) : s);
-            const winD = res.win ? 2 : -1;
-            newRels = Object.assign(Object.assign({}, newRels), { coach: Math.min(100, Math.max(0, newRels.coach + winD)), teammate: Math.min(100, Math.max(0, newRels.teammate + (res.win ? 1 : -1))) });
+            // B11: per-game relationship gains softened — old +2/-1 made coach hit 100 mid-S2.
+            // New: accumulate fractional deltas then round to int when storing.
+            const winD = res.win ? 0.5 : -0.25;
+            const mateD = res.win ? 0.25 : -0.25;
+            newRels = Object.assign(Object.assign({}, newRels), {
+                coach: Math.min(100, Math.max(0, newRels.coach + winD)),
+                teammate: Math.min(100, Math.max(0, newRels.teammate + mateD))
+            });
         }
         setRegularGames(newReg);
         setInjury(curInj);
@@ -1262,8 +1454,9 @@ function MainScreen({ saveId, init, onQuit }) {
         // Deduct rent if renting
         const rentCost = currentRental ? currentRental.monthly * 12 : 0;
         setSavings(prev => Math.max(0, +(prev + annualSavings - rentCost).toFixed(2)));
-        // Generate awards
-        const awards = generateSeasonAwards(player.name, team.abbr, team.name, avg, player.overall, wins, season, playoffBracket);
+        // Generate awards (now takes finalsAvg so FMVP only goes to player who actually played and dominated)
+        const finalsAvg = calcFinalsAvg(playoffBracket, team.abbr);
+        const awards = generateSeasonAwards(player.name, team.abbr, team.name, avg, player.overall, wins, season, playoffBracket, finalsAvg);
         setSeasonAwards(awards);
         setShowAwards(true);
         // Update teammate rapport
@@ -1634,7 +1827,7 @@ function MainScreen({ saveId, init, onQuit }) {
                         React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: ac, minWidth: 18, textAlign: "center" } }, alloc),
                         React.createElement("button", { onClick: () => allocTrain(opt.stat, 1), disabled: totalAlloc >= 6 || atCap, style: { width: 34, height: 34, borderRadius: 8, background: (totalAlloc >= 6 || atCap) ? "#111" : "#1a2a1a", border: "1px solid " + ((totalAlloc >= 6 || atCap) ? "#333" : ac + "44"), color: (totalAlloc >= 6 || atCap) ? "#333" : ac, fontSize: 18, cursor: (totalAlloc >= 6 || atCap) ? "not-allowed" : "pointer" } }, "+"))));
             }),
-            React.createElement("button", { onClick: confirmTraining, disabled: totalAlloc === 0, style: { width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, background: totalAlloc > 0 ? "linear-gradient(135deg,#f9a01b,#ffd700)" : "#222", border: "none", borderRadius: 12, color: totalAlloc > 0 ? "#000" : "#555", cursor: totalAlloc > 0 ? "pointer" : "not-allowed", marginTop: 4 } }, "\u786E\u8BA4\u8BAD\u7EC3\u8BA1\u5212"))) : offseasonDone ? (React.createElement("div", { style: { background: "#1a2a1a", borderRadius: 12, padding: 20, border: "1px solid #00ff8844", textAlign: "center" } },
+            React.createElement("button", { onClick: confirmTraining, style: { width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 12, color: "#000", cursor: "pointer", marginTop: 4 } }, totalAlloc > 0 ? "\u786E\u8BA4\u8BAD\u7EC3\u8BA1\u5212" : "\u8DF3\u8FC7\u8BAD\u7EC3\uFF0C\u5F00\u59CB\u65B0\u8D5B\u5B63"))) : offseasonDone ? (React.createElement("div", { style: { background: "#1a2a1a", borderRadius: 12, padding: 20, border: "1px solid #00ff8844", textAlign: "center" } },
             React.createElement("div", { style: { fontSize: 24, marginBottom: 8 } }, "\u2705"),
             React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: "#00ff88" } },
                 "\u8BAD\u7EC3\u5DF2\u5B8C\u6210 \u00B7 OVR ",
@@ -1832,7 +2025,7 @@ function MainScreen({ saveId, init, onQuit }) {
                                 " \u00B7 $",
                                 c.price,
                                 "M")),
-                        React.createElement("button", { disabled: !affordable, onClick: () => { setSavings(prev => +(prev - c.price).toFixed(2)); setOwnedCars(prev => [...prev, c]); }, style: { padding: "5px 12px", background: affordable ? "#1a2a1a" : "#111", border: "1px solid " + (affordable ? "#00ff8844" : "#ffffff05"), borderRadius: 8, color: affordable ? "#00ff88" : "#333", fontSize: 11, cursor: affordable ? "pointer" : "not-allowed" } }, affordable ? "购买" : "资金不足")));
+                        React.createElement("button", { disabled: !affordable, onClick: () => { setOwnedCars(prev => { if (prev.find(x => x.id === c.id)) return prev; setSavings(s => +(s - c.price).toFixed(2)); return [...prev, c]; }); }, style: { padding: "5px 12px", background: affordable ? "#1a2a1a" : "#111", border: "1px solid " + (affordable ? "#00ff8844" : "#ffffff05"), borderRadius: 8, color: affordable ? "#00ff88" : "#333", fontSize: 11, cursor: affordable ? "pointer" : "not-allowed" } }, affordable ? "购买" : "资金不足")));
                 })))),
         dayModal && (React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200 }, onClick: () => setDayModal(null) },
             React.createElement("div", { style: { background: "#111827", borderRadius: "18px 18px 0 0", padding: 24, width: "100%", maxWidth: 460 }, onClick: e => e.stopPropagation() },
@@ -1958,7 +2151,8 @@ function MainScreen({ saveId, init, onQuit }) {
                     { label: "总决赛MVP", icon: "🥇", value: seasonAwards.fmvp },
                     { label: "最佳教练", icon: "📋", value: seasonAwards.bestCoach },
                 ].map(a => {
-                    const isMe = a.value === player.name;
+                    // C: names now formatted as "Name (ABBR)" — match by prefix.
+                    const isMe = typeof a.value === "string" && a.value.indexOf(player.name + " (") === 0;
                     const isMyTeam = a.label === "总冠军球队" && seasonAwards.iChampion;
                     return (React.createElement("div", { key: a.label, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #ffffff08" } },
                         React.createElement("div", { style: { fontSize: 12, color: "#888" } },
@@ -1978,12 +2172,15 @@ function MainScreen({ saveId, init, onQuit }) {
                     { label: "最佳新秀阵容一队", members: seasonAwards.allRookie1 },
                     { label: "最佳新秀阵容二队", members: seasonAwards.allRookie2 },
                 ].map(a => {
-                    const hasMe = a.members.includes(player.name);
+                    const hasMe = a.members.some(m => typeof m === "string" && m.indexOf(player.name + " (") === 0);
                     return (React.createElement("div", { key: a.label, style: { marginTop: 10 } },
                         React.createElement("div", { style: { fontSize: 11, color: hasMe ? "#ffd700" : "#666", marginBottom: 4 } },
                             hasMe ? "⭐ " : "",
                             a.label),
-                        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4 } }, a.members.map((m, i) => (React.createElement("div", { key: i, style: { background: m === player.name ? "#ffd70022" : "#1a1a2e", borderRadius: 6, padding: "4px 10px", fontSize: 11, color: m === player.name ? "#ffd700" : "#aaa", border: "1px solid " + (m === player.name ? "#ffd70044" : "#ffffff0d") } }, m))))));
+                        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4 } }, a.members.map((m, i) => {
+                            const isMineHere = typeof m === "string" && m.indexOf(player.name + " (") === 0;
+                            return React.createElement("div", { key: i, style: { background: isMineHere ? "#ffd70022" : "#1a1a2e", borderRadius: 6, padding: "4px 10px", fontSize: 11, color: isMineHere ? "#ffd700" : "#aaa", border: "1px solid " + (isMineHere ? "#ffd70044" : "#ffffff0d") } }, m);
+                        }))));
                 }),
                 React.createElement("button", { onClick: () => setShowAwards(false), style: { width: "100%", marginTop: 20, padding: "13px 0", background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 12, color: "#000", fontWeight: 700, fontSize: 15, cursor: "pointer" } }, "\u5173\u95ED\u9881\u5956\u5178\u793C"))))));
 }
