@@ -22,11 +22,25 @@
   <!-- iOS 'Add to Home Screen': orange rounded square with basketball -->
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23f9a01b'/%3E%3Ctext x='50' y='72' text-anchor='middle' font-size='62'%3E%F0%9F%8F%80%3C/text%3E%3C/svg%3E">
 
+  <!-- Warm up the React CDN connection early -->
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+
   <title>NBA My Career</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { background: #0a0a0f; color: #fff; font-family: sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
-    #root { min-height: 100vh; }
+    #root { min-height: 100vh; max-width: 480px; margin: 0 auto; position: relative; }
+    @media (min-width: 600px) {
+      body { background: radial-gradient(ellipse at top, #1a1a2e 0%, #0a0a0f 70%); }
+      #root { box-shadow: 0 0 80px rgba(249,160,27,.12); border-left: 1px solid #ffffff0a; border-right: 1px solid #ffffff0a; }
+    }
+    #save-tools { position: fixed; bottom: max(8px, env(safe-area-inset-bottom)); right: 8px; z-index: 200; display: flex; gap: 6px; opacity: 1; transition: opacity .2s ease; }
+    @media (hover: hover) {
+      #save-tools { opacity: .4; }
+      #save-tools:hover, #save-tools:focus-within { opacity: 1; }
+    }
+    #save-tools button { background: #1a1a2e; color: #f9a01b; border: 1px solid #f9a01b44; border-radius: 8px; padding: 6px 10px; font-size: 11px; font-family: sans-serif; cursor: pointer; }
+    #save-tools button:active { background: #f9a01b22; }
     #loading {
       position: fixed; inset: 0; background: #0a0a0f;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -44,8 +58,8 @@
   </div>
   <div id="root"></div>
 
-  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh" crossorigin="anonymous"></script>
 
   <script>
     // Make React hooks available as globals (the compiled code uses them directly)
@@ -494,12 +508,12 @@ function SavesLobby({ onLoad, onNew }) {
     const [del, setDel] = useState(null);
     function doDelete(id) { const s = Object.assign({}, saves); delete s[id]; writeSaves(s); setSaves(s); setDel(null); }
     const list = Object.values(saves).sort((a, b) => b.savedAt - a.savedAt);
-    return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff", fontFamily: "sans-serif" } },
+    return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff" } },
         React.createElement("div", { style: { background: "linear-gradient(180deg,#1a1a2e,#0a0a0f)", padding: "48px 20px 28px", textAlign: "center" } },
             React.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 5, marginBottom: 10 } }, "NBA CAREER MODE"),
             React.createElement("div", { style: { fontSize: 38, fontWeight: 900, letterSpacing: 3 } }, "MY CAREER")),
         React.createElement("div", { style: { padding: 20, maxWidth: 460, margin: "0 auto" } },
-            React.createElement("button", { onClick: onNew, style: { width: "100%", padding: "18px 0", fontSize: 17, fontWeight: 700, background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 14, color: "#000", cursor: "pointer", fontFamily: "sans-serif", marginBottom: 24 } }, "+ \u65B0\u5EFA\u751F\u6DAF"),
+            React.createElement("button", { onClick: onNew, style: { width: "100%", padding: "18px 0", fontSize: 17, fontWeight: 700, background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 14, color: "#000", cursor: "pointer", marginBottom: 24 } }, "+ \u65B0\u5EFA\u751F\u6DAF"),
             list.length === 0 ? (React.createElement("div", { style: { textAlign: "center", padding: "40px 0", color: "#444" } },
                 React.createElement("div", { style: { fontSize: 32, marginBottom: 12 } }, "\uD83C\uDFC0"),
                 React.createElement("div", null, "\u8FD8\u6CA1\u6709\u5B58\u6863\uFF0C\u521B\u5EFA\u4F60\u7684\u7B2C\u4E00\u4E2A\u751F\u6DAF"))) : list.map(sv => {
@@ -533,10 +547,10 @@ function SavesLobby({ onLoad, onNew }) {
                                 "M/\u5E74"),
                             sv.injured && React.createElement("span", { style: { color: "#ff6b6b" } }, "\uD83E\uDD15\u4F24\u75C5")),
                         React.createElement("div", { style: { display: "flex", gap: 8 } },
-                            React.createElement("button", { onClick: () => onLoad(sv.id), style: { flex: 1, padding: "10px 0", background: tm.color, border: "none", borderRadius: 10, color: tm.accent, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "sans-serif" } }, "\u7EE7\u7EED\u6E38\u620F"),
+                            React.createElement("button", { onClick: () => onLoad(sv.id), style: { flex: 1, padding: "10px 0", background: tm.color, border: "none", borderRadius: 10, color: tm.accent, fontWeight: 700, fontSize: 14, cursor: "pointer" } }, "\u7EE7\u7EED\u6E38\u620F"),
                             del === sv.id ? (React.createElement("div", { style: { display: "flex", gap: 6 } },
-                                React.createElement("button", { onClick: () => doDelete(sv.id), style: { padding: "10px 12px", background: "#ff4444", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u786E\u8BA4\u5220\u9664"),
-                                React.createElement("button", { onClick: () => setDel(null), style: { padding: "10px 12px", background: "#333", border: "none", borderRadius: 10, color: "#aaa", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u53D6\u6D88"))) : (React.createElement("button", { onClick: () => setDel(sv.id), style: { padding: "10px 12px", background: "#1a1a2e", border: "1px solid #ffffff11", borderRadius: 10, color: "#555", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5220\u9664"))))));
+                                React.createElement("button", { onClick: () => doDelete(sv.id), style: { padding: "10px 12px", background: "#ff4444", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" } }, "\u786E\u8BA4\u5220\u9664"),
+                                React.createElement("button", { onClick: () => setDel(null), style: { padding: "10px 12px", background: "#333", border: "none", borderRadius: 10, color: "#aaa", fontSize: 12, cursor: "pointer" } }, "\u53D6\u6D88"))) : (React.createElement("button", { onClick: () => setDel(sv.id), style: { padding: "10px 12px", background: "#1a1a2e", border: "1px solid #ffffff11", borderRadius: 10, color: "#555", fontSize: 12, cursor: "pointer" } }, "\u5220\u9664"))))));
             }))));
 }
 // ════════════════ CREATE ════════════════
@@ -555,32 +569,32 @@ function CreateScreen({ onDone, onBack }) {
         const physicals = generatePhysicals(pos);
         onDone({ name: name.trim(), position: pos, archetype: finalArc.trim(), stats, ceiling, overall: calcOverall(stats), physicals });
     }
-    return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff", fontFamily: "sans-serif" } },
+    return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff" } },
         React.createElement("div", { style: { background: "linear-gradient(180deg,#1a1a2e,#0a0a0f)", padding: "32px 20px 20px", display: "flex", alignItems: "center", gap: 12 } },
-            React.createElement("button", { onClick: onBack, style: { background: "#ffffff11", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "sans-serif", fontSize: 13 } }, "\u8FD4\u56DE"),
+            React.createElement("button", { onClick: onBack, style: { background: "#ffffff11", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13 } }, "\u8FD4\u56DE"),
             React.createElement("div", null,
                 React.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 3 } }, "NEW CAREER"),
                 React.createElement("div", { style: { fontSize: 24, fontWeight: 900 } }, "\u521B\u5EFA\u7403\u5458"))),
         React.createElement("div", { style: { padding: 20, maxWidth: 440, margin: "0 auto" } },
             React.createElement("div", { style: { marginBottom: 18 } },
                 React.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 2, marginBottom: 8 } }, "\u7403\u5458\u59D3\u540D"),
-                React.createElement("input", { value: name, onChange: e => setName(e.target.value), placeholder: "\u8F93\u5165\u4F60\u7684\u540D\u5B57...", style: { width: "100%", padding: "14px 16px", background: "#111827", border: "1px solid #ffffff22", borderRadius: 10, color: "#fff", fontSize: 16, boxSizing: "border-box", outline: "none", fontFamily: "sans-serif" } })),
+                React.createElement("input", { value: name, onChange: e => setName(e.target.value), placeholder: "\u8F93\u5165\u4F60\u7684\u540D\u5B57...", style: { width: "100%", padding: "14px 16px", background: "#111827", border: "1px solid #ffffff22", borderRadius: 10, color: "#fff", fontSize: 16, boxSizing: "border-box", outline: "none" } })),
             React.createElement("div", { style: { marginBottom: 18 } },
                 React.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 2, marginBottom: 8 } }, "\u4F4D\u7F6E"),
-                React.createElement("div", { style: { display: "flex", gap: 8 } }, POSITIONS.map(p => (React.createElement("button", { key: p, onClick: () => { setPos(p); setArc(""); }, style: { flex: 1, padding: "12px 4px", background: pos === p ? "#f9a01b" : "#111827", border: "1px solid " + (pos === p ? "#f9a01b" : "#ffffff22"), color: pos === p ? "#000" : "#fff", borderRadius: 8, cursor: "pointer", fontSize: 13, fontFamily: "sans-serif", fontWeight: 700 } }, p))))),
+                React.createElement("div", { style: { display: "flex", gap: 8 } }, POSITIONS.map(p => (React.createElement("button", { key: p, onClick: () => { setPos(p); setArc(""); }, style: { flex: 1, padding: "12px 4px", background: pos === p ? "#f9a01b" : "#111827", border: "1px solid " + (pos === p ? "#f9a01b" : "#ffffff22"), color: pos === p ? "#000" : "#fff", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700 } }, p))))),
             React.createElement("div", { style: { marginBottom: 28 } },
                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } },
                     React.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 2 } }, "\u6253\u6CD5\u98CE\u683C"),
-                    React.createElement("button", { onClick: () => { setCustom(!custom); setArc(""); setCtext(""); }, style: { fontSize: 11, color: custom ? "#00ff88" : "#888", background: "transparent", border: "1px solid " + (custom ? "#00ff8844" : "#ffffff22"), borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontFamily: "sans-serif" } }, custom ? "✓ 自定义" : "✏ 自定义")),
+                    React.createElement("button", { onClick: () => { setCustom(!custom); setArc(""); setCtext(""); }, style: { fontSize: 11, color: custom ? "#00ff88" : "#888", background: "transparent", border: "1px solid " + (custom ? "#00ff8844" : "#ffffff22"), borderRadius: 6, padding: "4px 10px", cursor: "pointer" } }, custom ? "✓ 自定义" : "✏ 自定义")),
                 !custom ? (React.createElement("div", null,
-                    PRESET_ARCHETYPES[pos].map(a => (React.createElement("button", { key: a, onClick: () => setArc(a), style: { width: "100%", padding: "14px 16px", textAlign: "left", marginBottom: 8, background: arc === a ? "#1a2a1a" : "#111827", border: "1px solid " + (arc === a ? "#00ff88" : "#ffffff22"), color: arc === a ? "#00ff88" : "#ccc", borderRadius: 10, cursor: "pointer", fontSize: 15, fontFamily: "sans-serif" } }, a))),
-                    React.createElement("button", { onClick: () => { setCustom(true); setArc(""); }, style: { width: "100%", padding: "14px 16px", textAlign: "left", marginBottom: 8, background: "#0d1117", border: "1px dashed #ffffff33", color: "#888", borderRadius: 10, cursor: "pointer", fontSize: 14, fontFamily: "sans-serif" } }, "\u270F \u5176\u4ED6\uFF08\u81EA\u5B9A\u4E49\u8F93\u5165\uFF09"))) : (React.createElement("div", null,
-                    React.createElement("input", { value: ctext, onChange: e => setCtext(e.target.value), placeholder: "\u4F8B\u5982\uFF1A\u5168\u80FD\u6447\u6446\u4EBA\u3001\u7A7A\u95F4\u578B\u5927\u524D\u950B...", style: { width: "100%", padding: "14px 16px", background: "#111827", border: "1px solid #00ff8844", borderRadius: 10, color: "#00ff88", fontSize: 15, boxSizing: "border-box", outline: "none", fontFamily: "sans-serif" } }),
+                    PRESET_ARCHETYPES[pos].map(a => (React.createElement("button", { key: a, onClick: () => setArc(a), style: { width: "100%", padding: "14px 16px", textAlign: "left", marginBottom: 8, background: arc === a ? "#1a2a1a" : "#111827", border: "1px solid " + (arc === a ? "#00ff88" : "#ffffff22"), color: arc === a ? "#00ff88" : "#ccc", borderRadius: 10, cursor: "pointer", fontSize: 15 } }, a))),
+                    React.createElement("button", { onClick: () => { setCustom(true); setArc(""); }, style: { width: "100%", padding: "14px 16px", textAlign: "left", marginBottom: 8, background: "#0d1117", border: "1px dashed #ffffff33", color: "#888", borderRadius: 10, cursor: "pointer", fontSize: 14 } }, "\u270F \u5176\u4ED6\uFF08\u81EA\u5B9A\u4E49\u8F93\u5165\uFF09"))) : (React.createElement("div", null,
+                    React.createElement("input", { value: ctext, onChange: e => setCtext(e.target.value), placeholder: "\u4F8B\u5982\uFF1A\u5168\u80FD\u6447\u6446\u4EBA\u3001\u7A7A\u95F4\u578B\u5927\u524D\u950B...", style: { width: "100%", padding: "14px 16px", background: "#111827", border: "1px solid #00ff8844", borderRadius: 10, color: "#00ff88", fontSize: 15, boxSizing: "border-box", outline: "none" } }),
                     React.createElement("div", { style: { fontSize: 11, color: "#666", marginTop: 6 } }, "AI\u4F1A\u6839\u636E\u4F60\u7684\u98CE\u683C\u751F\u6210\u89E3\u8BF4")))),
             React.createElement("div", { style: { background: "#0f1923", borderRadius: 10, padding: 14, marginBottom: 20, border: "1px solid #f9a01b22" } },
                 React.createElement("div", { style: { fontSize: 11, color: "#f9a01b", marginBottom: 4 } }, "\u26A0 \u6F5C\u529B\u8BF4\u660E"),
                 React.createElement("div", { style: { fontSize: 12, color: "#888", lineHeight: 1.6 } }, "\u5C5E\u6027\u4E0A\u9650\u5B8C\u5168\u968F\u673A\uFF0C\u8EAB\u4F53\u5929\u8D4B\u4E5F\u5404\u4E0D\u76F8\u540C\u3002\u4F24\u75C5\u53EF\u80FD\u6C38\u4E45\u9650\u5236\u6210\u957F\u7A7A\u95F4\u3002\u53D1\u6325\u6253\u6CD5\u7279\u70B9\u624D\u80FD\u6700\u5927\u5316\u6F5C\u529B\u3002")),
-            React.createElement("button", { onClick: submit, disabled: !name.trim() || !finalArc.trim(), style: { width: "100%", padding: "18px 0", fontSize: 18, fontWeight: 700, background: name.trim() && finalArc.trim() ? "linear-gradient(135deg,#f9a01b,#ffd700)" : "#222", border: "none", borderRadius: 12, color: name.trim() && finalArc.trim() ? "#000" : "#555", cursor: name.trim() && finalArc.trim() ? "pointer" : "not-allowed", fontFamily: "sans-serif" } }, "\u524D\u5F80\u9009\u79C0\u5927\u4F1A \u2192"))));
+            React.createElement("button", { onClick: submit, disabled: !name.trim() || !finalArc.trim(), style: { width: "100%", padding: "18px 0", fontSize: 18, fontWeight: 700, background: name.trim() && finalArc.trim() ? "linear-gradient(135deg,#f9a01b,#ffd700)" : "#222", border: "none", borderRadius: 12, color: name.trim() && finalArc.trim() ? "#000" : "#555", cursor: name.trim() && finalArc.trim() ? "pointer" : "not-allowed" } }, "\u524D\u5F80\u9009\u79C0\u5927\u4F1A \u2192"))));
 }
 // ════════════════ DRAFT ════════════════
 function DraftScreen({ player, onDrafted, onBack }) {
@@ -602,8 +616,8 @@ function DraftScreen({ player, onDrafted, onBack }) {
         setPhase("result");
     }
     if (phase === "intro")
-        return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "sans-serif", color: "#fff", position: "relative" } },
-            React.createElement("button", { onClick: onBack, style: { position: "absolute", top: 20, left: 20, background: "#ffffff11", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "sans-serif", fontSize: 13 } }, "\u8FD4\u56DE"),
+        return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, color: "#fff", position: "relative" } },
+            React.createElement("button", { onClick: onBack, style: { position: "absolute", top: 20, left: 20, background: "#ffffff11", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13 } }, "\u8FD4\u56DE"),
             React.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 4, marginBottom: 12 } }, "NBA DRAFT NIGHT"),
             React.createElement("div", { style: { fontSize: 36, fontWeight: 900, textAlign: "center", marginBottom: 8 } }, "\u4F60\u5DF2\u5C31\u4F4D"),
             React.createElement("div", { style: { fontSize: 15, color: "#888", textAlign: "center", marginBottom: 36 } },
@@ -616,13 +630,13 @@ function DraftScreen({ player, onDrafted, onBack }) {
                 "30\u652F\u7403\u961F\u7684GM\u90FD\u5728\u7814\u7A76\u4F60\u7684\u5F55\u50CF\u3002",
                 React.createElement("br", null),
                 "\u9009\u79C0\u5927\u5385\u706F\u5149\u7480\u74A8\uFF0C\u4F60\u897F\u88C5\u7B14\u633A\u5730\u5750\u5728\u53F0\u4E0B\u2026\u2026"),
-            React.createElement("button", { onClick: runDraft, style: { padding: "18px 48px", fontSize: 18, fontWeight: 700, background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 14, color: "#000", cursor: "pointer", fontFamily: "sans-serif" } }, "\u5F00\u59CB\u9009\u79C0")));
+            React.createElement("button", { onClick: runDraft, style: { padding: "18px 48px", fontSize: 18, fontWeight: 700, background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 14, color: "#000", cursor: "pointer" } }, "\u5F00\u59CB\u9009\u79C0")));
     if (loading)
-        return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "sans-serif" } },
+        return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" } },
             React.createElement("div", { style: { fontSize: 48, marginBottom: 20 } }, "\uD83C\uDFA4"),
             React.createElement("div", { style: { fontSize: 18, color: "#f9a01b" } }, "\u9009\u79C0\u8FDB\u884C\u4E2D...")));
     if (phase === "result" && dt)
-        return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "sans-serif", color: "#fff" } },
+        return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, color: "#fff" } },
             React.createElement("div", { style: { fontSize: 13, color: "#888", letterSpacing: 3, marginBottom: 4 } },
                 "\u7B2C ",
                 pick,
@@ -642,7 +656,7 @@ function DraftScreen({ player, onDrafted, onBack }) {
             story && React.createElement("div", { style: { background: "#0f1923", borderRadius: 12, padding: 14, borderLeft: "4px solid " + dt.accent, marginBottom: 24, maxWidth: 360 } },
                 React.createElement("div", { style: { fontSize: 10, color: dt.accent, letterSpacing: 2, marginBottom: 6 } }, "\u89E3\u8BF4"),
                 React.createElement("div", { style: { fontSize: 14, color: "#ddd", lineHeight: 1.7 } }, story)),
-            React.createElement("button", { onClick: () => onDrafted(dt, pick), style: { padding: "16px 40px", fontSize: 16, fontWeight: 700, background: dt.color, border: "2px solid " + dt.accent, borderRadius: 12, color: dt.accent, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5F00\u59CB\u751F\u6DAF \u2192")));
+            React.createElement("button", { onClick: () => onDrafted(dt, pick), style: { padding: "16px 40px", fontSize: 16, fontWeight: 700, background: dt.color, border: "2px solid " + dt.accent, borderRadius: 12, color: dt.accent, cursor: "pointer" } }, "\u5F00\u59CB\u751F\u6DAF \u2192")));
     return null;
 }
 // ════════════════ MAIN SCREEN ════════════════
@@ -664,7 +678,7 @@ function StandingsView({ standings, myTeamAbbr, ac }) {
         return { label: "-", color: "#555" };
     }
     return (React.createElement("div", { style: { padding: 14 } },
-        React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14 } }, [["west", "西部"], ["east", "东部"]].map(([v, l]) => (React.createElement("button", { key: v, onClick: () => setTab(v), style: { flex: 1, padding: "10px 0", background: tab === v ? ac + "22" : "#111827", border: "1px solid " + (tab === v ? ac : "#ffffff11"), borderRadius: 10, color: tab === v ? ac : "#666", fontWeight: tab === v ? 700 : 400, fontSize: 14, cursor: "pointer", fontFamily: "sans-serif" } }, l)))),
+        React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14 } }, [["west", "西部"], ["east", "东部"]].map(([v, l]) => (React.createElement("button", { key: v, onClick: () => setTab(v), style: { flex: 1, padding: "10px 0", background: tab === v ? ac + "22" : "#111827", border: "1px solid " + (tab === v ? ac : "#ffffff11"), borderRadius: 10, color: tab === v ? ac : "#666", fontWeight: tab === v ? 700 : 400, fontSize: 14, cursor: "pointer" } }, l)))),
         React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 8, fontSize: 10, color: "#555", paddingLeft: 4 } },
             React.createElement("span", { style: { color: "#00ff88" } }, "\u25A0 \u76F4\u63A5\u664B\u7EA7"),
             React.createElement("span", { style: { color: "#f9a01b" } }, "\u25A0 \u9644\u52A0\u8D5B (7-10)"),
@@ -756,7 +770,7 @@ function SeriesCard({ series, myTeamAbbr, teamColor, ac, onSimGame, simming }) {
             const myWonGame = isPlayed && series.games[gi].status === "won" ? series.teamA.abbr === myTeamAbbr : false;
             return (React.createElement("div", { key: gi, style: { width: 24, height: 24, borderRadius: 4, background: !isPlayed ? "#1a1a2e" : g.status === "won" ? (series.teamA.abbr === myTeamAbbr ? "#00ff8855" : "#ff444455") : (series.teamA.abbr === myTeamAbbr ? "#ff444455" : "#00ff8855"), border: "1px solid #ffffff11", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#888" } }, !isPlayed ? "·" : g.status === "won" ? (series.teamA.abbr === myTeamAbbr ? "W" : "L") : (series.teamA.abbr === myTeamAbbr ? "L" : "W")));
         })),
-        !done && (React.createElement("button", { onClick: onSimGame, disabled: simming, style: { width: "100%", padding: "10px 0", background: teamColor, border: "1px solid " + ac, borderRadius: 10, color: ac, fontWeight: 700, fontSize: 13, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" } }, simming ? "模拟中..." : "▶ 模拟第" + (myWins + oppWins + 1) + "场"))));
+        !done && (React.createElement("button", { onClick: onSimGame, disabled: simming, style: { width: "100%", padding: "10px 0", background: teamColor, border: "1px solid " + ac, borderRadius: 10, color: ac, fontWeight: 700, fontSize: 13, cursor: simming ? "not-allowed" : "pointer" } }, simming ? "模拟中..." : "▶ 模拟第" + (myWins + oppWins + 1) + "场"))));
 }
 function PlayoffView({ bracket, myTeam, onSimGame, simming, onOffseason, ac, narrative, narrativeCtx }) {
     const [tab, setTab] = useState(() => myTeam.conf === "West" ? "west" : "east");
@@ -791,8 +805,8 @@ function PlayoffView({ bracket, myTeam, onSimGame, simming, onOffseason, ac, nar
                     nextActiveSeries.teamB.abbr,
                     " \u00B7 ",
                     nextActiveSeries.round)),
-            React.createElement("button", { onClick: () => onSimGame(nextActiveSeries), disabled: simming, style: { padding: "9px 18px", background: simming ? "#222" : myTeam.color, border: "1px solid " + (simming ? "#333" : ac), borderRadius: 9, color: simming ? "#444" : ac, fontWeight: 700, fontSize: 13, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" } }, simming ? "模拟中..." : "▶ 模拟"))),
-        React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } }, [["west", "西部"], ["east", "东部"]].map(([v, l]) => (React.createElement("button", { key: v, onClick: () => setTab(v), style: { flex: 1, padding: "9px 0", background: tab === v ? ac + "22" : "#111827", border: "1px solid " + (tab === v ? ac : "#ffffff11"), borderRadius: 10, color: tab === v ? ac : "#666", fontWeight: tab === v ? 700 : 400, fontSize: 13, cursor: "pointer", fontFamily: "sans-serif" } },
+            React.createElement("button", { onClick: () => onSimGame(nextActiveSeries), disabled: simming, style: { padding: "9px 18px", background: simming ? "#222" : myTeam.color, border: "1px solid " + (simming ? "#333" : ac), borderRadius: 9, color: simming ? "#444" : ac, fontWeight: 700, fontSize: 13, cursor: simming ? "not-allowed" : "pointer" } }, simming ? "模拟中..." : "▶ 模拟"))),
+        React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } }, [["west", "西部"], ["east", "东部"]].map(([v, l]) => (React.createElement("button", { key: v, onClick: () => setTab(v), style: { flex: 1, padding: "9px 0", background: tab === v ? ac + "22" : "#111827", border: "1px solid " + (tab === v ? ac : "#ffffff11"), borderRadius: 10, color: tab === v ? ac : "#666", fontWeight: tab === v ? 700 : 400, fontSize: 13, cursor: "pointer" } },
             l,
             "\u5BF9\u9635")))),
         (myNotIn && tab === myTeam.conf.toLowerCase()) && (React.createElement("div", { style: { background: "#2a0d0d", borderRadius: 10, padding: "10px 14px", marginBottom: 10, fontSize: 12, color: "#ff8888", border: "1px solid #ff444422" } }, "\u26A0 \u4F60\u7684\u7403\u961F\u672A\u8FDB\u5165\u5B63\u540E\u8D5B \u2014 \u4ECD\u53EF\u89C2\u770B\u5E76\u6A21\u62DF\u5176\u4ED6\u5BF9\u9635")),
@@ -805,7 +819,7 @@ function PlayoffView({ bracket, myTeam, onSimGame, simming, onOffseason, ac, nar
             React.createElement("div", { style: { fontSize: 18, fontWeight: 900, color: "#ffd700" } }, champion === myTeam.abbr ? "NBA总冠军！" : "季后赛冠军：" + champion))),
         narrative && (React.createElement("div", { style: { marginTop: 12, background: "#0f1923", borderRadius: 12, padding: 14, borderLeft: "4px solid " + ac } },
             React.createElement("div", { style: { fontSize: 13, color: "#ddd", lineHeight: 1.7, whiteSpace: "pre-line" } }, narrative))),
-        (isMyOut || myNotIn || champion) && (React.createElement("button", { onClick: onOffseason, style: { width: "100%", marginTop: 12, padding: "12px 0", background: "#1a1a0d", border: "1px solid #f9a01b44", borderRadius: 10, color: "#f9a01b", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "sans-serif" } }, "\u2192 \u8FDB\u5165\u4F11\u8D5B\u671F"))));
+        (isMyOut || myNotIn || champion) && (React.createElement("button", { onClick: onOffseason, style: { width: "100%", marginTop: 12, padding: "12px 0", background: "#1a1a0d", border: "1px solid #f9a01b44", borderRadius: 10, color: "#f9a01b", fontWeight: 700, fontSize: 14, cursor: "pointer" } }, "\u2192 \u8FDB\u5165\u4F11\u8D5B\u671F"))));
 }
 const TEAMMATE_NAMES = ["贾马尔", "德里克", "泰勒", "马库斯", "凯尔", "乔丹", "坦纳", "迈尔斯", "奥利弗", "肖恩", "布莱克", "达文特", "雷吉", "特雷", "内特"];
 const TEAMMATE_ROLES = ["首发控卫", "首发得分后卫", "首发小前锋", "首发大前锋", "首发中锋", "第六人", "轮换得分手", "防守专家", "组织替补", "体能轮换"];
@@ -1334,11 +1348,11 @@ function MainScreen({ saveId, init, onQuit }) {
         setTradeLoading(false);
     }
     const ph = player.physicals || { heightCm: 188, wingspanCm: 191, wingDelta: 3, weightKg: 88, staticTraits: ["弹跳精英"], dynamicTraits: ["挡拆高手"] };
-    return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff", fontFamily: "sans-serif", paddingBottom: 80 } },
+    return (React.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff", paddingBottom: 80 } },
         React.createElement("div", { style: { background: team.color, padding: "12px 16px" } },
             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
                 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
-                    React.createElement("button", { onClick: () => { doSave(); onQuit(); }, style: { background: "rgba(0,0,0,0.3)", border: "none", color: "#fff", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontFamily: "sans-serif", fontSize: 12 } }, "\u2190 \u5B58\u6863"),
+                    React.createElement("button", { onClick: () => { doSave(); onQuit(); }, style: { background: "rgba(0,0,0,0.3)", border: "none", color: "#fff", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 12 } }, "\u2190 \u5B58\u6863"),
                     React.createElement("div", null,
                         React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: ac } }, player.name),
                         React.createElement("div", { style: { fontSize: 11, opacity: 0.8 } },
@@ -1365,10 +1379,10 @@ function MainScreen({ saveId, init, onQuit }) {
                             " ",
                             health.label),
                         saveMsg && React.createElement("span", { style: { color: "#00ff88" } }, saveMsg))))),
-        React.createElement("div", { style: { display: "flex", background: "#0d0d14", borderBottom: "1px solid #ffffff0d", overflowX: "auto" } }, [["calendar", "📅 赛程"], ["playoffs", "🏆 季后赛"], ["standings", "📋 战绩"], ["player", "🧬 球员"], ["stats", "📊 数据"], ["offseason", "🏋 训练"], ["relations", "👥 人际"], ["agent", "💰 经纪"], ["finances", "🏠 财产"]].map(([v, l]) => (React.createElement("button", { key: v, onClick: () => setView(v), style: { flex: "0 0 auto", padding: "11px 12px", background: "transparent", border: "none", borderBottom: view === v ? "2px solid " + ac : "2px solid transparent", color: view === v ? ac : "#555", fontSize: 11, fontWeight: view === v ? 700 : 400, cursor: "pointer", fontFamily: "sans-serif", whiteSpace: "nowrap" } }, l)))),
+        React.createElement("div", { style: { display: "flex", background: "#0d0d14", borderBottom: "1px solid #ffffff0d", overflowX: "auto" } }, [["calendar", "📅 赛程"], ["playoffs", "🏆 季后赛"], ["standings", "📋 战绩"], ["player", "🧬 球员"], ["stats", "📊 数据"], ["offseason", "🏋 训练"], ["relations", "👥 人际"], ["agent", "💰 经纪"], ["finances", "🏠 财产"]].map(([v, l]) => (React.createElement("button", { key: v, onClick: () => setView(v), style: { flex: "0 0 auto", padding: "11px 12px", background: "transparent", border: "none", borderBottom: view === v ? "2px solid " + ac : "2px solid transparent", color: view === v ? ac : "#555", fontSize: 11, fontWeight: view === v ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap" } }, l)))),
         tradeDanger && (React.createElement("div", { style: { background: "#2a0d0d", padding: "8px 16px", fontSize: 12, color: "#ff8888", display: "flex", justifyContent: "space-between", alignItems: "center" } },
             React.createElement("span", null, "\u26A0 \u7BA1\u7406\u5C42\u5173\u7CFB\u544A\u6025\uFF0C\u53EF\u80FD\u88AB\u4EA4\u6613"),
-            React.createElement("button", { onClick: () => setView("relations"), style: { background: "transparent", border: "1px solid #ff8888", color: "#ff8888", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontFamily: "sans-serif", fontSize: 11 } }, "\u67E5\u770B"))),
+            React.createElement("button", { onClick: () => setView("relations"), style: { background: "transparent", border: "1px solid #ff8888", color: "#ff8888", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 11 } }, "\u67E5\u770B"))),
         pendingBrand && (React.createElement("div", { style: { background: "#0d2a1a", padding: "10px 16px", margin: "8px 14px", borderRadius: 10, border: "1px solid #00ff8844", display: "flex", justifyContent: "space-between", alignItems: "center" } },
             React.createElement("div", null,
                 React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#00ff88" } }, "\uD83D\uDCBC \u7ECF\u7EAA\u4EBA\uFF1A\u54C1\u724C\u9080\u7EA6"),
@@ -1382,8 +1396,8 @@ function MainScreen({ saveId, init, onQuit }) {
                     pendingBrand.offer,
                     "M/\u5E74")),
             React.createElement("div", { style: { display: "flex", gap: 6 } },
-                React.createElement("button", { onClick: () => { setBrands(prev => [...prev, pendingBrand]); setPendingBrand(null); }, style: { padding: "6px 12px", background: "#00ff88", border: "none", borderRadius: 8, color: "#000", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u63A5\u53D7"),
-                React.createElement("button", { onClick: () => setPendingBrand(null), style: { padding: "6px 10px", background: "#333", border: "none", borderRadius: 8, color: "#aaa", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u62D2\u7EDD")))),
+                React.createElement("button", { onClick: () => { setBrands(prev => [...prev, pendingBrand]); setPendingBrand(null); }, style: { padding: "6px 12px", background: "#00ff88", border: "none", borderRadius: 8, color: "#000", fontWeight: 700, fontSize: 12, cursor: "pointer" } }, "\u63A5\u53D7"),
+                React.createElement("button", { onClick: () => setPendingBrand(null), style: { padding: "6px 10px", background: "#333", border: "none", borderRadius: 8, color: "#aaa", fontSize: 12, cursor: "pointer" } }, "\u62D2\u7EDD")))),
         view === "playoffs" && (React.createElement("div", { style: { padding: 14 } },
             !seasonOver && !playoffBracket && (React.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 24, textAlign: "center", border: "1px solid #ffffff0d" } },
                 React.createElement("div", { style: { fontSize: 28, marginBottom: 10 } }, "\uD83C\uDFC0"),
@@ -1399,7 +1413,7 @@ function MainScreen({ saveId, init, onQuit }) {
                         const pb = buildNBAPlayoffBracket(st, team.abbr, 2024 + (season - 1));
                         setLeagueStandings(st);
                         setPlayoffBracket(pb);
-                    }, style: { padding: "12px 28px", background: team.color, border: "2px solid " + ac, borderRadius: 10, color: ac, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "sans-serif" } }, "\u751F\u6210\u5B63\u540E\u8D5B\u5BF9\u9635\u8868"))))),
+                    }, style: { padding: "12px 28px", background: team.color, border: "2px solid " + ac, borderRadius: 10, color: ac, fontWeight: 700, fontSize: 14, cursor: "pointer" } }, "\u751F\u6210\u5B63\u540E\u8D5B\u5BF9\u9635\u8868"))))),
         view === "standings" && (React.createElement(StandingsView, { standings: generateLeagueStandings(team, regularGames), myTeamAbbr: team.abbr, ac: ac })),
         view === "player" && (React.createElement("div", { style: { padding: 14 } },
             React.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, marginBottom: 12, border: "1px solid " + health.color + "44" } },
@@ -1415,8 +1429,8 @@ function MainScreen({ saveId, init, onQuit }) {
                             "\u53D7\u5F71\u54CD\u5C5E\u6027\uFF1A",
                             injury.affectedStats.map(s => STAT_LABELS[s]).join("、"))),
                     React.createElement("div", { style: { textAlign: "right" } },
-                        !injury && resting === 0 && (React.createElement("button", { onClick: () => setRestModal(true), style: { padding: "8px 14px", background: "#1a1a2e", border: "1px solid #88aaff44", borderRadius: 10, color: "#88aaff", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\uD83D\uDE34 \u7533\u8BF7\u4F11\u6218")),
-                        resting > 0 && (React.createElement("button", { onClick: () => setResting(0), style: { padding: "8px 14px", background: "#1a1a2e", border: "1px solid #ffaa4444", borderRadius: 10, color: "#ffaa44", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u53D6\u6D88\u4F11\u6218")))),
+                        !injury && resting === 0 && (React.createElement("button", { onClick: () => setRestModal(true), style: { padding: "8px 14px", background: "#1a1a2e", border: "1px solid #88aaff44", borderRadius: 10, color: "#88aaff", fontSize: 12, cursor: "pointer" } }, "\uD83D\uDE34 \u7533\u8BF7\u4F11\u6218")),
+                        resting > 0 && (React.createElement("button", { onClick: () => setResting(0), style: { padding: "8px 14px", background: "#1a1a2e", border: "1px solid #ffaa4444", borderRadius: 10, color: "#ffaa44", fontSize: 12, cursor: "pointer" } }, "\u53D6\u6D88\u4F11\u6218")))),
                 React.createElement("div", { style: { height: 8, background: "#1a1a2e", borderRadius: 4, overflow: "hidden" } },
                     React.createElement("div", { style: { height: "100%", width: (resting > 0 ? 60 : injury ? Math.max(20, (1 - injury.gamesLeft / 60) * 100) : 100) + "%", background: health.color, borderRadius: 4, transition: "width 0.5s" } }))),
             React.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, marginBottom: 12, border: "1px solid #ffffff0d" } },
@@ -1460,18 +1474,18 @@ function MainScreen({ saveId, init, onQuit }) {
                 React.createElement("div", null,
                     React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: ac } }, "\u5E38\u89C4\u8D5B\u5DF2\u7ED3\u675F"),
                     React.createElement("div", { style: { fontSize: 11, color: "#888" } }, "\u524D\u5F80\u300C\u5B63\u540E\u8D5B\u300D\u6807\u7B7E\u7EE7\u7EED")),
-                React.createElement("button", { onClick: () => setView("playoffs"), style: { padding: "8px 16px", background: team.color, border: "1px solid " + ac, borderRadius: 8, color: ac, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u2192 \u5B63\u540E\u8D5B"))),
+                React.createElement("button", { onClick: () => setView("playoffs"), style: { padding: "8px 16px", background: team.color, border: "1px solid " + ac, borderRadius: 8, color: ac, fontWeight: 700, fontSize: 12, cursor: "pointer" } }, "\u2192 \u5B63\u540E\u8D5B"))),
             phase === "offseason" && (React.createElement("div", { style: { background: "#1a1a0d", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid #f9a01b44" } },
                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
                     React.createElement("div", null,
                         React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#f9a01b" } }, "\u2600 \u4F11\u8D5B\u671F"),
                         React.createElement("div", { style: { fontSize: 11, color: "#888" } }, "\u524D\u5F80\u300C\u8BAD\u7EC3\u300D\u5F3A\u5316\u5C5E\u6027")),
                     React.createElement("div", { style: { display: "flex", gap: 8, flexDirection: "column", alignItems: "flex-end" } },
-                        seasonAwards && React.createElement("button", { onClick: () => setShowAwards(true), style: { padding: "6px 12px", background: "#ffd70022", border: "1px solid #ffd70044", borderRadius: 8, color: "#ffd700", fontSize: 11, cursor: "pointer", fontFamily: "sans-serif" } }, "\uD83C\uDFC6 \u67E5\u770B\u9881\u5956"),
-                        offseasonDone && !freeAgent && React.createElement("button", { onClick: startNextSeason, style: { padding: "6px 12px", background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 8, color: "#000", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "sans-serif" } },
+                        seasonAwards && React.createElement("button", { onClick: () => setShowAwards(true), style: { padding: "6px 12px", background: "#ffd70022", border: "1px solid #ffd70044", borderRadius: 8, color: "#ffd700", fontSize: 11, cursor: "pointer" } }, "\uD83C\uDFC6 \u67E5\u770B\u9881\u5956"),
+                        offseasonDone && !freeAgent && React.createElement("button", { onClick: startNextSeason, style: { padding: "6px 12px", background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 8, color: "#000", fontWeight: 700, fontSize: 11, cursor: "pointer" } },
                             "\u5F00\u59CB S",
                             season + 1),
-                        freeAgent && React.createElement("button", { onClick: () => setContractModal(true), style: { padding: "6px 12px", background: "#2a0d0d", border: "1px solid #ff444444", borderRadius: 8, color: "#ff8888", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "sans-serif" } }, "\u26A0 \u81EA\u7531\u7403\u5458\uFF0C\u5F85\u7B7E"))))),
+                        freeAgent && React.createElement("button", { onClick: () => setContractModal(true), style: { padding: "6px 12px", background: "#2a0d0d", border: "1px solid #ff444444", borderRadius: 8, color: "#ff8888", fontSize: 11, fontWeight: 700, cursor: "pointer" } }, "\u26A0 \u81EA\u7531\u7403\u5458\uFF0C\u5F85\u7B7E"))))),
             injury && (React.createElement("div", { style: { background: "#2a0d0d", borderRadius: 10, padding: "9px 14px", marginBottom: 10, border: "1px solid #ff444444" } },
                 React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#ff6b6b" } },
                     "\uD83E\uDD15 ",
@@ -1480,9 +1494,9 @@ function MainScreen({ saveId, init, onQuit }) {
                     injury.gamesLeft,
                     " \u573A"))),
             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
-                React.createElement("button", { onClick: prevMonth, style: { background: "#111827", border: "1px solid #ffffff22", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "sans-serif" } }, "\u2039"),
+                React.createElement("button", { onClick: prevMonth, style: { background: "#111827", border: "1px solid #ffffff22", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer" } }, "\u2039"),
                 React.createElement("div", { style: { fontSize: 14, fontWeight: 700 } }, fmtMonthLabel(calYear, calMonth)),
-                React.createElement("button", { onClick: nextMonth, style: { background: "#111827", border: "1px solid #ffffff22", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "sans-serif" } }, "\u203A")),
+                React.createElement("button", { onClick: nextMonth, style: { background: "#111827", border: "1px solid #ffffff22", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer" } }, "\u203A")),
             React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 3 } }, ["日", "一", "二", "三", "四", "五", "六"].map(d => (React.createElement("div", { key: d, style: { textAlign: "center", fontSize: 10, color: "#444", padding: "3px 0" } }, d)))),
             React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 } },
                 Array(firstDay).fill(null).map((_, i) => React.createElement("div", { key: "e" + i })),
@@ -1503,9 +1517,9 @@ function MainScreen({ saveId, init, onQuit }) {
                 })),
             phase === "regular" && (React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } },
                 calGames.filter(g => g.status === "upcoming").length > 0 && (React.createElement("button", { onClick: async () => { const l = calGames.filter(g => g.status === "upcoming").slice(-1)[0]; if (l)
-                        await simulateUpTo(l.id); }, disabled: simming, style: { flex: 1, padding: "11px 0", fontSize: 12, fontWeight: 700, background: simming ? "#222" : team.color, border: "2px solid " + (simming ? "#333" : ac), color: simming ? "#444" : ac, borderRadius: 9, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" } }, simming ? "模拟中..." : "▶▶ 本月")),
+                        await simulateUpTo(l.id); }, disabled: simming, style: { flex: 1, padding: "11px 0", fontSize: 12, fontWeight: 700, background: simming ? "#222" : team.color, border: "2px solid " + (simming ? "#333" : ac), color: simming ? "#444" : ac, borderRadius: 9, cursor: simming ? "not-allowed" : "pointer" } }, simming ? "模拟中..." : "▶▶ 本月")),
                 regularGames.filter(g => g.status === "upcoming").length > 0 && (React.createElement("button", { onClick: async () => { const l = regularGames.filter(g => g.status === "upcoming").slice(-1)[0]; if (l)
-                        await simulateUpTo(l.id); }, disabled: simming, style: { flex: 1, padding: "11px 0", fontSize: 12, fontWeight: 700, background: "transparent", border: "1px solid #ffffff22", color: "#666", borderRadius: 9, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" } }, "\u23E9 \u5269\u4F59\u5E38\u89C4\u8D5B")))),
+                        await simulateUpTo(l.id); }, disabled: simming, style: { flex: 1, padding: "11px 0", fontSize: 12, fontWeight: 700, background: "transparent", border: "1px solid #ffffff22", color: "#666", borderRadius: 9, cursor: simming ? "not-allowed" : "pointer" } }, "\u23E9 \u5269\u4F59\u5E38\u89C4\u8D5B")))),
             narrative && (React.createElement("div", { style: { marginTop: 12, background: "#0f1923", borderRadius: 12, padding: 14, borderLeft: "4px solid " + ac } },
                 narrativeCtx && React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 8 } },
                     React.createElement("div", { style: { fontSize: 11, color: "#aaa" } },
@@ -1611,13 +1625,13 @@ function MainScreen({ saveId, init, onQuit }) {
                                     " \u2192 ",
                                     proj)))),
                     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
-                        React.createElement("button", { onClick: () => allocTrain(opt.stat, -1), disabled: alloc === 0 || atCap, style: { width: 34, height: 34, borderRadius: 8, background: "#1a1a2e", border: "1px solid #ffffff22", color: (alloc === 0 || atCap) ? "#333" : "#fff", fontSize: 18, cursor: (alloc === 0 || atCap) ? "not-allowed" : "pointer", fontFamily: "sans-serif" } }, "\u2212"),
+                        React.createElement("button", { onClick: () => allocTrain(opt.stat, -1), disabled: alloc === 0 || atCap, style: { width: 34, height: 34, borderRadius: 8, background: "#1a1a2e", border: "1px solid #ffffff22", color: (alloc === 0 || atCap) ? "#333" : "#fff", fontSize: 18, cursor: (alloc === 0 || atCap) ? "not-allowed" : "pointer" } }, "\u2212"),
                         React.createElement("div", { style: { flex: 1, height: 7, background: "#1a1a2e", borderRadius: 4, overflow: "hidden" } },
                             React.createElement("div", { style: { height: "100%", width: (alloc / 6 * 100) + "%", background: ac, transition: "width 0.3s" } })),
                         React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: ac, minWidth: 18, textAlign: "center" } }, alloc),
-                        React.createElement("button", { onClick: () => allocTrain(opt.stat, 1), disabled: totalAlloc >= 6 || atCap, style: { width: 34, height: 34, borderRadius: 8, background: (totalAlloc >= 6 || atCap) ? "#111" : "#1a2a1a", border: "1px solid " + ((totalAlloc >= 6 || atCap) ? "#333" : ac + "44"), color: (totalAlloc >= 6 || atCap) ? "#333" : ac, fontSize: 18, cursor: (totalAlloc >= 6 || atCap) ? "not-allowed" : "pointer", fontFamily: "sans-serif" } }, "+"))));
+                        React.createElement("button", { onClick: () => allocTrain(opt.stat, 1), disabled: totalAlloc >= 6 || atCap, style: { width: 34, height: 34, borderRadius: 8, background: (totalAlloc >= 6 || atCap) ? "#111" : "#1a2a1a", border: "1px solid " + ((totalAlloc >= 6 || atCap) ? "#333" : ac + "44"), color: (totalAlloc >= 6 || atCap) ? "#333" : ac, fontSize: 18, cursor: (totalAlloc >= 6 || atCap) ? "not-allowed" : "pointer" } }, "+"))));
             }),
-            React.createElement("button", { onClick: confirmTraining, disabled: totalAlloc === 0, style: { width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, background: totalAlloc > 0 ? "linear-gradient(135deg,#f9a01b,#ffd700)" : "#222", border: "none", borderRadius: 12, color: totalAlloc > 0 ? "#000" : "#555", cursor: totalAlloc > 0 ? "pointer" : "not-allowed", fontFamily: "sans-serif", marginTop: 4 } }, "\u786E\u8BA4\u8BAD\u7EC3\u8BA1\u5212"))) : offseasonDone ? (React.createElement("div", { style: { background: "#1a2a1a", borderRadius: 12, padding: 20, border: "1px solid #00ff8844", textAlign: "center" } },
+            React.createElement("button", { onClick: confirmTraining, disabled: totalAlloc === 0, style: { width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, background: totalAlloc > 0 ? "linear-gradient(135deg,#f9a01b,#ffd700)" : "#222", border: "none", borderRadius: 12, color: totalAlloc > 0 ? "#000" : "#555", cursor: totalAlloc > 0 ? "pointer" : "not-allowed", marginTop: 4 } }, "\u786E\u8BA4\u8BAD\u7EC3\u8BA1\u5212"))) : offseasonDone ? (React.createElement("div", { style: { background: "#1a2a1a", borderRadius: 12, padding: 20, border: "1px solid #00ff8844", textAlign: "center" } },
             React.createElement("div", { style: { fontSize: 24, marginBottom: 8 } }, "\u2705"),
             React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: "#00ff88" } },
                 "\u8BAD\u7EC3\u5DF2\u5B8C\u6210 \u00B7 OVR ",
@@ -1643,7 +1657,7 @@ function MainScreen({ saveId, init, onQuit }) {
                                 val,
                                 "/100")),
                         React.createElement("button", { onClick: async () => { setRelModal(pt.key); if (!relStory[pt.key])
-                                await loadRelStory(pt.key); }, style: { padding: "6px 12px", background: "#1a1a2e", border: "1px solid " + ac + "44", borderRadius: 8, color: ac, fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u8BE6\u60C5")),
+                                await loadRelStory(pt.key); }, style: { padding: "6px 12px", background: "#1a1a2e", border: "1px solid " + ac + "44", borderRadius: 8, color: ac, fontSize: 12, cursor: "pointer" } }, "\u8BE6\u60C5")),
                     React.createElement("div", { style: { height: 6, background: "#1a1a2e", borderRadius: 3, overflow: "hidden" } },
                         React.createElement("div", { style: { height: "100%", width: val + "%", background: col, borderRadius: 3, transition: "width 0.5s" } })),
                     val < 30 && React.createElement("div", { style: { fontSize: 11, color: "#ff6b6b", marginTop: 6 } }, "\u26A0 \u5173\u7CFB\u6781\u5DEE\uFF0C\u53EF\u80FD\u88AB\u4EA4\u6613")));
@@ -1676,7 +1690,7 @@ function MainScreen({ saveId, init, onQuit }) {
                 tradeResult ? (React.createElement("div", null,
                     React.createElement("div", { style: { background: "#0f1923", borderRadius: 10, padding: 12, borderLeft: "4px solid #f9a01b", marginBottom: 10 } },
                         React.createElement("div", { style: { fontSize: 13, color: "#ddd", lineHeight: 1.6 } }, tradeResult)),
-                    React.createElement("button", { onClick: () => setTradeResult(null), style: { padding: "6px 14px", background: "#333", border: "none", borderRadius: 8, color: "#aaa", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5173\u95ED"))) : (React.createElement("button", { onClick: doRequestTrade, disabled: tradeLoading, style: { width: "100%", padding: "12px 0", background: "#2a0d0d", border: "1px solid #ff444444", borderRadius: 10, color: "#ff8888", fontSize: 13, fontWeight: 700, cursor: tradeLoading ? "not-allowed" : "pointer", fontFamily: "sans-serif" } }, tradeLoading ? "处理中..." : "📤 申请交易"))))),
+                    React.createElement("button", { onClick: () => setTradeResult(null), style: { padding: "6px 14px", background: "#333", border: "none", borderRadius: 8, color: "#aaa", fontSize: 12, cursor: "pointer" } }, "\u5173\u95ED"))) : (React.createElement("button", { onClick: doRequestTrade, disabled: tradeLoading, style: { width: "100%", padding: "12px 0", background: "#2a0d0d", border: "1px solid #ff444444", borderRadius: 10, color: "#ff8888", fontSize: 13, fontWeight: 700, cursor: tradeLoading ? "not-allowed" : "pointer" } }, tradeLoading ? "处理中..." : "📤 申请交易"))))),
         view === "agent" && (React.createElement("div", { style: { padding: 14 } },
             React.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, marginBottom: 14, border: "1px solid #ffffff0d" } },
                 React.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 10 } }, "\u5F53\u524D\u5408\u540C"),
@@ -1698,7 +1712,7 @@ function MainScreen({ saveId, init, onQuit }) {
                             "\u5269\u4F59 ",
                             Math.max(0, contract.totalYears - contract.year),
                             " \u5E74"))),
-                contract.year >= contract.totalYears && !contractOffer && (React.createElement("button", { onClick: () => { const base = Math.max(8, Math.round((player.overall - 60) * 0.9 + season * 0.5)); const yrs = Math.floor(Math.random() * 3) + 2; setContractOffer({ salary: base, years: yrs }); setContractModal(true); }, style: { width: "100%", marginTop: 12, padding: "10px 0", background: team.color, border: "1px solid " + ac, borderRadius: 10, color: ac, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "sans-serif" } }, "\uD83D\uDCBC \u5F00\u59CB\u7EED\u7EA6\u8C08\u5224"))),
+                contract.year >= contract.totalYears && !contractOffer && (React.createElement("button", { onClick: () => { const base = Math.max(8, Math.round((player.overall - 60) * 0.9 + season * 0.5)); const yrs = Math.floor(Math.random() * 3) + 2; setContractOffer({ salary: base, years: yrs }); setContractModal(true); }, style: { width: "100%", marginTop: 12, padding: "10px 0", background: team.color, border: "1px solid " + ac, borderRadius: 10, color: ac, fontWeight: 700, fontSize: 13, cursor: "pointer" } }, "\uD83D\uDCBC \u5F00\u59CB\u7EED\u7EA6\u8C08\u5224"))),
             React.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 2, marginBottom: 10 } }, "\u54C1\u724C\u5408\u4F5C"),
             brands.length === 0 ? (React.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 20, textAlign: "center", color: "#444", marginBottom: 12 } },
                 React.createElement("div", { style: { fontSize: 28, marginBottom: 8 } }, "\uD83D\uDCE6"),
@@ -1767,7 +1781,7 @@ function MainScreen({ saveId, init, onQuit }) {
                                     " \u00B7 $",
                                     (r.monthly * 12).toFixed(2),
                                     "M/\u5E74")),
-                            React.createElement("button", { onClick: () => setCurrentRental(isRenting ? null : r), style: { padding: "5px 12px", background: isRenting ? "#2a0d0d" : "#1a2a1a", border: "1px solid " + (isRenting ? "#ff444444" : "#00ff8844"), borderRadius: 8, color: isRenting ? "#ff8888" : "#00ff88", fontSize: 11, cursor: "pointer", fontFamily: "sans-serif" } }, isRenting ? "退租" : "租房")));
+                            React.createElement("button", { onClick: () => setCurrentRental(isRenting ? null : r), style: { padding: "5px 12px", background: isRenting ? "#2a0d0d" : "#1a2a1a", border: "1px solid " + (isRenting ? "#ff444444" : "#00ff8844"), borderRadius: 8, color: isRenting ? "#ff8888" : "#00ff88", fontSize: 11, cursor: "pointer" } }, isRenting ? "退租" : "租房")));
                     }))),
                 React.createElement("div", { style: { fontSize: 11, color: "#f9a01b", marginBottom: 6 } },
                     "\u8D2D\u623F\uFF08",
@@ -1787,7 +1801,7 @@ function MainScreen({ saveId, init, onQuit }) {
                                 " \u00B7 $",
                                 h.price,
                                 "M")),
-                        isOwned ? (React.createElement("button", { onClick: () => { setSavings(prev => +(prev + h.price * 0.85).toFixed(2)); setOwnedHouse(null); }, style: { padding: "5px 10px", background: "#2a0d0d", border: "1px solid #ff444444", borderRadius: 8, color: "#ff8888", fontSize: 10, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5356\u51FA")) : (React.createElement("button", { disabled: !affordable, onClick: () => { setSavings(prev => +(prev - h.price).toFixed(2)); setOwnedHouse(Object.assign(Object.assign({}, h), { city: team.city })); setCurrentRental(null); }, style: { padding: "5px 10px", background: affordable ? "#1a2a1a" : "#111", border: "1px solid " + (affordable ? "#00ff8844" : "#ffffff05"), borderRadius: 8, color: affordable ? "#00ff88" : "#333", fontSize: 11, cursor: affordable ? "pointer" : "not-allowed", fontFamily: "sans-serif" } }, affordable ? "购买" : "资金不足"))));
+                        isOwned ? (React.createElement("button", { onClick: () => { setSavings(prev => +(prev + h.price * 0.85).toFixed(2)); setOwnedHouse(null); }, style: { padding: "5px 10px", background: "#2a0d0d", border: "1px solid #ff444444", borderRadius: 8, color: "#ff8888", fontSize: 10, cursor: "pointer" } }, "\u5356\u51FA")) : (React.createElement("button", { disabled: !affordable, onClick: () => { setSavings(prev => +(prev - h.price).toFixed(2)); setOwnedHouse(Object.assign(Object.assign({}, h), { city: team.city })); setCurrentRental(null); }, style: { padding: "5px 10px", background: affordable ? "#1a2a1a" : "#111", border: "1px solid " + (affordable ? "#00ff8844" : "#ffffff05"), borderRadius: 8, color: affordable ? "#00ff88" : "#333", fontSize: 11, cursor: affordable ? "pointer" : "not-allowed" } }, affordable ? "购买" : "资金不足"))));
                 })),
             React.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 8 } }, "\u8F66\u8F86"),
             React.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 14, marginBottom: 12, border: "1px solid #ffffff0d" } },
@@ -1798,7 +1812,7 @@ function MainScreen({ saveId, init, onQuit }) {
                             c.icon,
                             " ",
                             c.name),
-                        React.createElement("button", { onClick: () => { setSavings(prev => +(prev + c.price * 0.7).toFixed(2)); setOwnedCars(prev => prev.filter((_, j) => j !== i)); }, style: { padding: "4px 10px", background: "#2a0d0d", border: "1px solid #ff444422", borderRadius: 6, color: "#ff8888", fontSize: 10, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5356\u51FA")))))),
+                        React.createElement("button", { onClick: () => { setSavings(prev => +(prev + c.price * 0.7).toFixed(2)); setOwnedCars(prev => prev.filter((_, j) => j !== i)); }, style: { padding: "4px 10px", background: "#2a0d0d", border: "1px solid #ff444422", borderRadius: 6, color: "#ff8888", fontSize: 10, cursor: "pointer" } }, "\u5356\u51FA")))))),
                 CARS.map(c => {
                     const affordable = savings >= c.price;
                     const owned = ownedCars.find(x => x.id === c.id);
@@ -1815,7 +1829,7 @@ function MainScreen({ saveId, init, onQuit }) {
                                 " \u00B7 $",
                                 c.price,
                                 "M")),
-                        React.createElement("button", { disabled: !affordable, onClick: () => { setSavings(prev => +(prev - c.price).toFixed(2)); setOwnedCars(prev => [...prev, c]); }, style: { padding: "5px 12px", background: affordable ? "#1a2a1a" : "#111", border: "1px solid " + (affordable ? "#00ff8844" : "#ffffff05"), borderRadius: 8, color: affordable ? "#00ff88" : "#333", fontSize: 11, cursor: affordable ? "pointer" : "not-allowed", fontFamily: "sans-serif" } }, affordable ? "购买" : "资金不足")));
+                        React.createElement("button", { disabled: !affordable, onClick: () => { setSavings(prev => +(prev - c.price).toFixed(2)); setOwnedCars(prev => [...prev, c]); }, style: { padding: "5px 12px", background: affordable ? "#1a2a1a" : "#111", border: "1px solid " + (affordable ? "#00ff8844" : "#ffffff05"), borderRadius: 8, color: affordable ? "#00ff88" : "#333", fontSize: 11, cursor: affordable ? "pointer" : "not-allowed" } }, affordable ? "购买" : "资金不足")));
                 })))),
         dayModal && (React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200 }, onClick: () => setDayModal(null) },
             React.createElement("div", { style: { background: "#111827", borderRadius: "18px 18px 0 0", padding: 24, width: "100%", maxWidth: 460 }, onClick: e => e.stopPropagation() },
@@ -1829,27 +1843,27 @@ function MainScreen({ saveId, init, onQuit }) {
                         dayModal.game.status === "won" ? "✅ 胜" : "❌ 负",
                         dayModal.game.stats && !dayModal.game.stats.rested ? " · " + dayModal.game.stats.pts + "分 " + dayModal.game.stats.ast + "助 " + dayModal.game.stats.reb + "篮" : "  休战"))) : React.createElement("div", { style: { fontSize: 13, color: "#555", marginBottom: 14 } }, "\u672C\u65E5\u65E0\u6BD4\u8D5B"),
                 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
-                    dayModal.game && dayModal.game.status === "upcoming" && (React.createElement("button", { onClick: async () => { await simulateUpTo(dayModal.game.id); setDayModal(null); }, disabled: simming, style: { width: "100%", padding: "13px 0", background: team.color, border: "2px solid " + ac, borderRadius: 10, color: ac, fontWeight: 700, fontSize: 14, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" } }, "\u25B6 \u6A21\u62DF\u5230\u8FD9\u573A\u6BD4\u8D5B")),
+                    dayModal.game && dayModal.game.status === "upcoming" && (React.createElement("button", { onClick: async () => { await simulateUpTo(dayModal.game.id); setDayModal(null); }, disabled: simming, style: { width: "100%", padding: "13px 0", background: team.color, border: "2px solid " + ac, borderRadius: 10, color: ac, fontWeight: 700, fontSize: 14, cursor: simming ? "not-allowed" : "pointer" } }, "\u25B6 \u6A21\u62DF\u5230\u8FD9\u573A\u6BD4\u8D5B")),
                     calGames.filter(g => g.status === "upcoming").length > 0 && (React.createElement("button", { onClick: async () => { const l = calGames.filter(g => g.status === "upcoming").slice(-1)[0]; if (l)
-                            await simulateUpTo(l.id); setDayModal(null); }, disabled: simming, style: { width: "100%", padding: "12px 0", background: "#1a2a1a", border: "1px solid #00ff8844", borderRadius: 10, color: "#00ff88", fontWeight: 700, fontSize: 13, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" } }, "\u25B6\u25B6 \u6A21\u62DF\u672C\u6708\u6240\u6709\u6BD4\u8D5B")),
+                            await simulateUpTo(l.id); setDayModal(null); }, disabled: simming, style: { width: "100%", padding: "12px 0", background: "#1a2a1a", border: "1px solid #00ff8844", borderRadius: 10, color: "#00ff88", fontWeight: 700, fontSize: 13, cursor: simming ? "not-allowed" : "pointer" } }, "\u25B6\u25B6 \u6A21\u62DF\u672C\u6708\u6240\u6709\u6BD4\u8D5B")),
                     regularGames.filter(g => g.status === "upcoming").length > 0 && (React.createElement("button", { onClick: async () => { const l = regularGames.filter(g => g.status === "upcoming").slice(-1)[0]; if (l)
-                            await simulateUpTo(l.id); setDayModal(null); }, disabled: simming, style: { width: "100%", padding: "12px 0", background: "#1a1a2e", border: "1px solid #ffffff22", borderRadius: 10, color: "#888", fontSize: 13, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" } }, "\u23E9 \u6A21\u62DF\u5269\u4F59\u6240\u6709\u5E38\u89C4\u8D5B")),
-                    React.createElement("button", { onClick: () => setDayModal(null), style: { width: "100%", padding: "10px 0", background: "transparent", border: "1px solid #ffffff11", borderRadius: 10, color: "#555", fontSize: 13, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5173\u95ED"))))),
+                            await simulateUpTo(l.id); setDayModal(null); }, disabled: simming, style: { width: "100%", padding: "12px 0", background: "#1a1a2e", border: "1px solid #ffffff22", borderRadius: 10, color: "#888", fontSize: 13, cursor: simming ? "not-allowed" : "pointer" } }, "\u23E9 \u6A21\u62DF\u5269\u4F59\u6240\u6709\u5E38\u89C4\u8D5B")),
+                    React.createElement("button", { onClick: () => setDayModal(null), style: { width: "100%", padding: "10px 0", background: "transparent", border: "1px solid #ffffff11", borderRadius: 10, color: "#555", fontSize: 13, cursor: "pointer" } }, "\u5173\u95ED"))))),
         restModal && (React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 } },
             React.createElement("div", { style: { background: "#111827", borderRadius: 16, padding: 24, width: "100%", maxWidth: 360, border: "1px solid #88aaff44" } },
                 React.createElement("div", { style: { fontSize: 15, fontWeight: 700, marginBottom: 4 } }, "\uD83D\uDE34 \u7533\u8BF7\u4F11\u6218"),
                 React.createElement("div", { style: { fontSize: 13, color: "#888", marginBottom: 20 } }, "\u4F11\u6218\u671F\u95F4\u7403\u961F\u4F1A\u7528\u5176\u4ED6\u7403\u5458\u4E0A\u573A\uFF0C\u6BD4\u8D5B\u80DC\u7387\u7565\u964D\u4F46\u4F60\u7684\u72B6\u6001\u5F97\u5230\u4FDD\u62A4\u3002"),
                 React.createElement("div", { style: { fontSize: 11, color: "#aaa", marginBottom: 8 } }, "\u4F11\u6218\u573A\u6570"),
                 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14, marginBottom: 24 } },
-                    React.createElement("button", { onClick: () => setRestInput(Math.max(1, restInput - 1)), style: { width: 40, height: 40, borderRadius: 10, background: "#1a1a2e", border: "1px solid #ffffff22", color: "#fff", fontSize: 20, cursor: "pointer", fontFamily: "sans-serif" } }, "\u2212"),
+                    React.createElement("button", { onClick: () => setRestInput(Math.max(1, restInput - 1)), style: { width: 40, height: 40, borderRadius: 10, background: "#1a1a2e", border: "1px solid #ffffff22", color: "#fff", fontSize: 20, cursor: "pointer" } }, "\u2212"),
                     React.createElement("div", { style: { flex: 1, textAlign: "center", fontSize: 32, fontWeight: 900, color: "#88aaff" } }, restInput),
-                    React.createElement("button", { onClick: () => setRestInput(Math.min(20, restInput + 1)), style: { width: 40, height: 40, borderRadius: 10, background: "#1a1a2e", border: "1px solid #88aaff44", color: "#88aaff", fontSize: 20, cursor: "pointer", fontFamily: "sans-serif" } }, "+")),
+                    React.createElement("button", { onClick: () => setRestInput(Math.min(20, restInput + 1)), style: { width: 40, height: 40, borderRadius: 10, background: "#1a1a2e", border: "1px solid #88aaff44", color: "#88aaff", fontSize: 20, cursor: "pointer" } }, "+")),
                 React.createElement("div", { style: { display: "flex", gap: 8 } },
-                    React.createElement("button", { onClick: () => { setResting(restInput); setRestModal(false); }, style: { flex: 1, padding: "12px 0", background: "#88aaff", border: "none", borderRadius: 10, color: "#000", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "sans-serif" } },
+                    React.createElement("button", { onClick: () => { setResting(restInput); setRestModal(false); }, style: { flex: 1, padding: "12px 0", background: "#88aaff", border: "none", borderRadius: 10, color: "#000", fontWeight: 700, fontSize: 14, cursor: "pointer" } },
                         "\u786E\u8BA4\u4F11\u6218 ",
                         restInput,
                         " \u573A"),
-                    React.createElement("button", { onClick: () => setRestModal(false), style: { flex: 1, padding: "12px 0", background: "#222", border: "none", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer", fontFamily: "sans-serif" } }, "\u53D6\u6D88"))))),
+                    React.createElement("button", { onClick: () => setRestModal(false), style: { flex: 1, padding: "12px 0", background: "#222", border: "none", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer" } }, "\u53D6\u6D88"))))),
         relModal && (React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 }, onClick: () => setRelModal(null) },
             React.createElement("div", { style: { background: "#111827", borderRadius: 16, padding: 24, width: "100%", maxWidth: 400, border: "1px solid #ffffff11" }, onClick: e => e.stopPropagation() },
                 React.createElement("div", { style: { fontSize: 15, fontWeight: 700, marginBottom: 10 } }, (_d = PERSON_TYPES.find(p => p.key === relModal)) === null || _d === void 0 ? void 0 :
@@ -1859,8 +1873,8 @@ function MainScreen({ saveId, init, onQuit }) {
                 React.createElement("div", { style: { background: "#0f1923", borderRadius: 10, padding: 12, marginBottom: 14, minHeight: 60 } },
                     React.createElement("div", { style: { fontSize: 13, color: "#ddd", lineHeight: 1.7 } }, relLoading ? "加载中..." : (relStory[relModal] || "点击「刷新」获取故事"))),
                 React.createElement("div", { style: { display: "flex", gap: 8 } },
-                    React.createElement("button", { onClick: () => loadRelStory(relModal), disabled: relLoading, style: { flex: 1, padding: "10px 0", background: team.color, border: "none", borderRadius: 10, color: ac, fontWeight: 700, fontSize: 13, cursor: relLoading ? "not-allowed" : "pointer", fontFamily: "sans-serif" } }, relLoading ? "加载中..." : "刷新故事"),
-                    React.createElement("button", { onClick: () => setRelModal(null), style: { flex: 1, padding: "10px 0", background: "#222", border: "none", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5173\u95ED"))))),
+                    React.createElement("button", { onClick: () => loadRelStory(relModal), disabled: relLoading, style: { flex: 1, padding: "10px 0", background: team.color, border: "none", borderRadius: 10, color: ac, fontWeight: 700, fontSize: 13, cursor: relLoading ? "not-allowed" : "pointer" } }, relLoading ? "加载中..." : "刷新故事"),
+                    React.createElement("button", { onClick: () => setRelModal(null), style: { flex: 1, padding: "10px 0", background: "#222", border: "none", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer" } }, "\u5173\u95ED"))))),
         contractModal && contractOffer && (React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 200, padding: "20px 16px", overflowY: "auto" } },
             React.createElement("div", { style: { background: "#111827", borderRadius: 16, padding: 24, width: "100%", maxWidth: 420, border: "1px solid #f9a01b44" } },
                 React.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 2, marginBottom: 6 } }, freeAgent ? "🏀 自由球员" : "合同谈判"),
@@ -1883,9 +1897,9 @@ function MainScreen({ saveId, init, onQuit }) {
                                 (contractOffer.salary * contractOffer.years).toFixed(0),
                                 "M"))),
                     React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } },
-                        React.createElement("button", { onClick: () => setContractOffer(prev => (Object.assign(Object.assign({}, prev), { salary: Math.max(1, +(prev.salary - 0.5).toFixed(1)) }))), style: { width: 34, height: 34, borderRadius: 8, background: "#1a1a2e", border: "1px solid #ffffff22", color: "#fff", fontSize: 16, cursor: "pointer", fontFamily: "sans-serif" } }, "\u2212"),
+                        React.createElement("button", { onClick: () => setContractOffer(prev => (Object.assign(Object.assign({}, prev), { salary: Math.max(1, +(prev.salary - 0.5).toFixed(1)) }))), style: { width: 34, height: 34, borderRadius: 8, background: "#1a1a2e", border: "1px solid #ffffff22", color: "#fff", fontSize: 16, cursor: "pointer" } }, "\u2212"),
                         React.createElement("div", { style: { flex: 1, textAlign: "center", fontSize: 11, color: "#555" } }, "\u624B\u52A8\u8C03\u6574\u85AA\u6C34"),
-                        React.createElement("button", { onClick: () => setContractOffer(prev => (Object.assign(Object.assign({}, prev), { salary: +(prev.salary + 0.5).toFixed(1) }))), style: { width: 34, height: 34, borderRadius: 8, background: "#1a2a1a", border: "1px solid " + ac + "44", color: ac, fontSize: 16, cursor: "pointer", fontFamily: "sans-serif" } }, "+"))),
+                        React.createElement("button", { onClick: () => setContractOffer(prev => (Object.assign(Object.assign({}, prev), { salary: +(prev.salary + 0.5).toFixed(1) }))), style: { width: 34, height: 34, borderRadius: 8, background: "#1a2a1a", border: "1px solid " + ac + "44", color: ac, fontSize: 16, cursor: "pointer" } }, "+"))),
                 React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } },
                     React.createElement("button", { onClick: () => {
                             const newTeamAbbr = contractOffer.rivalAbbr;
@@ -1902,8 +1916,8 @@ function MainScreen({ saveId, init, onQuit }) {
                             setContractOffer(null);
                             setFreeAgent(false);
                             setFaOffers([]);
-                        }, style: { flex: 2, padding: "12px 0", background: "linear-gradient(135deg,#00ff88,#00cc66)", border: "none", borderRadius: 10, color: "#000", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "sans-serif" } }, "\u2713 \u63A5\u53D7"),
-                    React.createElement("button", { onClick: () => setContractOffer(prev => (Object.assign(Object.assign({}, prev), { salary: +(prev.salary + Math.floor(Math.random() * 3) + 1).toFixed(1) }))), style: { flex: 1, padding: "12px 0", background: "#1a2a1a", border: "1px solid #00ff8844", borderRadius: 10, color: "#00ff88", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\uD83D\uDCC8 \u8981\u4EF7")),
+                        }, style: { flex: 2, padding: "12px 0", background: "linear-gradient(135deg,#00ff88,#00cc66)", border: "none", borderRadius: 10, color: "#000", fontWeight: 700, fontSize: 13, cursor: "pointer" } }, "\u2713 \u63A5\u53D7"),
+                    React.createElement("button", { onClick: () => setContractOffer(prev => (Object.assign(Object.assign({}, prev), { salary: +(prev.salary + Math.floor(Math.random() * 3) + 1).toFixed(1) }))), style: { flex: 1, padding: "12px 0", background: "#1a2a1a", border: "1px solid #00ff8844", borderRadius: 10, color: "#00ff88", fontWeight: 600, fontSize: 12, cursor: "pointer" } }, "\uD83D\uDCC8 \u8981\u4EF7")),
                 faOffers.length > 0 && (React.createElement("div", null,
                     React.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 8 } },
                         "\u5168\u8054\u76DF\u62A5\u4EF7 (",
@@ -1912,7 +1926,7 @@ function MainScreen({ saveId, init, onQuit }) {
                     React.createElement("div", { style: { maxHeight: 220, overflowY: "auto" } }, faOffers.map((o, i) => {
                         const tm = ALL_TEAMS.find(t => t.abbr === o.rivalAbbr);
                         const isSelected = contractOffer.rivalAbbr === o.rivalAbbr;
-                        return (React.createElement("button", { key: i, onClick: () => setContractOffer(o), style: { width: "100%", padding: "9px 12px", marginBottom: 4, background: isSelected ? ac + "22" : "#0d1117", border: "1px solid " + (isSelected ? ac + "66" : "#ffffff0d"), borderRadius: 8, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "sans-serif" } },
+                        return (React.createElement("button", { key: i, onClick: () => setContractOffer(o), style: { width: "100%", padding: "9px 12px", marginBottom: 4, background: isSelected ? ac + "22" : "#0d1117", border: "1px solid " + (isSelected ? ac + "66" : "#ffffff0d"), borderRadius: 8, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" } },
                             React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
                                 React.createElement("div", { style: { width: 8, height: 8, borderRadius: 2, background: tm ? tm.color : "#333", border: "1px solid " + (tm ? tm.accent : "#555"), flexShrink: 0 } }),
                                 React.createElement("div", { style: { textAlign: "left" } },
@@ -1926,7 +1940,7 @@ function MainScreen({ saveId, init, onQuit }) {
                                 o.salary,
                                 "M")));
                     })))),
-                !freeAgent && (React.createElement("button", { onClick: () => setContractModal(false), style: { width: "100%", marginTop: 10, padding: "9px 0", background: "transparent", border: "1px solid #ffffff11", borderRadius: 10, color: "#555", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u7A0D\u540E\u51B3\u5B9A\uFF08\u6210\u4E3A\u81EA\u7531\u7403\u5458\uFF09"))))),
+                !freeAgent && (React.createElement("button", { onClick: () => setContractModal(false), style: { width: "100%", marginTop: 10, padding: "9px 0", background: "transparent", border: "1px solid #ffffff11", borderRadius: 10, color: "#555", fontSize: 12, cursor: "pointer" } }, "\u7A0D\u540E\u51B3\u5B9A\uFF08\u6210\u4E3A\u81EA\u7531\u7403\u5458\uFF09"))))),
         showAwards && seasonAwards && (React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 300, padding: "20px 16px", overflowY: "auto" } },
             React.createElement("div", { style: { background: "#111827", borderRadius: 16, padding: 24, width: "100%", maxWidth: 440, border: "1px solid #ffd70044" } },
                 React.createElement("div", { style: { fontSize: 11, color: "#ffd700", letterSpacing: 3, marginBottom: 8 } }, "\u5E74\u5EA6\u9881\u5956\u5178\u793C"),
@@ -1968,7 +1982,7 @@ function MainScreen({ saveId, init, onQuit }) {
                             a.label),
                         React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4 } }, a.members.map((m, i) => (React.createElement("div", { key: i, style: { background: m === player.name ? "#ffd70022" : "#1a1a2e", borderRadius: 6, padding: "4px 10px", fontSize: 11, color: m === player.name ? "#ffd700" : "#aaa", border: "1px solid " + (m === player.name ? "#ffd70044" : "#ffffff0d") } }, m))))));
                 }),
-                React.createElement("button", { onClick: () => setShowAwards(false), style: { width: "100%", marginTop: 20, padding: "13px 0", background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 12, color: "#000", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5173\u95ED\u9881\u5956\u5178\u793C"))))));
+                React.createElement("button", { onClick: () => setShowAwards(false), style: { width: "100%", marginTop: 20, padding: "13px 0", background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 12, color: "#000", fontWeight: 700, fontSize: 15, cursor: "pointer" } }, "\u5173\u95ED\u9881\u5956\u5178\u793C"))))));
 }
 // ════════════════ ROOT ════════════════
 function App() {
@@ -2043,6 +2057,52 @@ function App() {
         '</div>';
       console.error(e);
     }
+  </script>
+
+  <!-- Save export/import widget (independent of React; talks to localStorage directly) -->
+  <div id="save-tools">
+    <button type="button" onclick="window.__nbaExportSave()" title="导出全部存档为 JSON">⬇ 备份</button>
+    <button type="button" onclick="document.getElementById('__nbaImportFile').click()" title="从 JSON 文件恢复存档">⬆ 恢复</button>
+    <input type="file" id="__nbaImportFile" accept="application/json,.json" hidden onchange="window.__nbaImportSave(this.files[0]); this.value=''">
+  </div>
+  <script>
+    // Save export/import — does not touch React. Reads/writes STORAGE_KEY directly.
+    (function () {
+      var KEY = "nba_career_v7";
+      window.__nbaExportSave = function () {
+        var raw = localStorage.getItem(KEY);
+        if (!raw || raw === "{}") { alert("还没有存档可以备份"); return; }
+        var blob = new Blob([raw], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        var ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+        a.href = url;
+        a.download = "nbacareer-saves-" + ts + ".json";
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      };
+      window.__nbaImportSave = function (file) {
+        if (!file) return;
+        var r = new FileReader();
+        r.onload = function () {
+          try {
+            var data = JSON.parse(r.result);
+            if (typeof data !== "object" || data === null || Array.isArray(data)) throw new Error("文件格式不对");
+            var cur = localStorage.getItem(KEY);
+            var curParsed = cur ? JSON.parse(cur) : {};
+            var curN = Object.keys(curParsed).length;
+            var newN = Object.keys(data).length;
+            if (!confirm("确认导入存档？\n当前 " + curN + " 个 / 文件 " + newN + " 个\n确定 = 合并（同名覆盖），取消 = 放弃")) return;
+            localStorage.setItem(KEY, JSON.stringify(Object.assign({}, curParsed, data)));
+            alert("导入成功，页面即将刷新");
+            location.reload();
+          } catch (e) {
+            alert("导入失败：" + e.message);
+          }
+        };
+        r.readAsText(file);
+      };
+    })();
   </script>
 </body>
 </html>
