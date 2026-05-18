@@ -1,0 +1,21 @@
+{
+  "name": "NBA My Career",
+  "short_name": "NBA Career",
+  "description": "在浏览器里模拟一段完整的 NBA 职业生涯：选秀、伤病、季后赛、合同、代言。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0f",
+  "theme_color": "#f9a01b",
+  "lang": "zh-CN",
+  "categories": ["games", "sports"],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
