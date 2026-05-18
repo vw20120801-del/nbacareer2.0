@@ -67,7 +67,7 @@
   <!-- Game bundle (compiled from src/App.tsx via esbuild) -->
   <script>
 (() => {
-  // ../../../../../../private/tmp/nba_src/react-shim.ts
+  // ../../../../../../private/tmp/nba_d1/react-shim.ts
   var R = typeof window !== "undefined" ? window.React : globalThis.React;
   var react_shim_default = R;
   var useState = R.useState;
@@ -78,7 +78,7 @@
   var Fragment = R.Fragment;
   var createElement = R.createElement;
 
-  // ../../../../../../private/tmp/nba_src/App.new.tsx
+  // ../../../../../../private/tmp/nba_d1/App.new.tsx
   var POSITIONS = ["PG", "SG", "SF", "PF", "C"];
   var PRESET_ARCHETYPES = {
     PG: ["\u95EA\u7535\u63A7\u536B", "\u7EC4\u7EC7\u5927\u5E08", "\u5F97\u5206\u578B\u63A7\u536B"],
@@ -131,12 +131,12 @@
     { id: "iq", label: "\u6218\u672F\u5B66\u4E60", stat: "iq", desc: "\u5F55\u50CF\u7814\u7A76\u4E0E\u6218\u672F\u7406\u89E3", icon: "\u{1F9E0}" }
   ];
   var INJURY_TYPES = [
-    { name: "\u8E1D\u5173\u8282\u626D\u4F24", minG: 3, maxG: 8, stats: ["speed"], severity: "\u8F7B\u4F24" },
-    { name: "\u819D\u76D6\u97E7\u5E26\u62C9\u4F24", minG: 12, maxG: 30, stats: ["speed", "strength"], severity: "\u91CD\u4F24" },
-    { name: "\u808C\u8089\u62C9\u4F24", minG: 4, maxG: 12, stats: ["strength"], severity: "\u8F7B\u4F24" },
-    { name: "\u624B\u6307\u9AA8\u6298", minG: 6, maxG: 18, stats: ["shooting", "passing"], severity: "\u4E2D\u4F24" },
-    { name: "\u80CC\u90E8\u75C9\u631B", minG: 3, maxG: 8, stats: ["strength", "defense"], severity: "\u8F7B\u4F24" },
-    { name: "\u8DDF\u8171\u6495\u88C2", minG: 40, maxG: 60, stats: ["speed", "strength"], severity: "\u8D5B\u5B63\u62A5\u9500" }
+    { name: "\u8E1D\u5173\u8282\u626D\u4F24", minDays: 8, maxDays: 20, stats: ["speed"], severity: "\u8F7B\u4F24" },
+    { name: "\u819D\u76D6\u97E7\u5E26\u62C9\u4F24", minDays: 30, maxDays: 75, stats: ["speed", "strength"], severity: "\u91CD\u4F24" },
+    { name: "\u808C\u8089\u62C9\u4F24", minDays: 10, maxDays: 30, stats: ["strength"], severity: "\u8F7B\u4F24" },
+    { name: "\u624B\u6307\u9AA8\u6298", minDays: 15, maxDays: 45, stats: ["shooting", "passing"], severity: "\u4E2D\u4F24" },
+    { name: "\u80CC\u90E8\u75C9\u631B", minDays: 8, maxDays: 20, stats: ["strength", "defense"], severity: "\u8F7B\u4F24" },
+    { name: "\u8DDF\u8171\u6495\u88C2", minDays: 100, maxDays: 150, stats: ["speed", "strength"], severity: "\u8D5B\u5B63\u62A5\u9500" }
   ];
   var BRANDS = [
     { name: "Nike", type: "\u7403\u978B", baseOffer: 5, icon: "\u{1F45F}" },
@@ -349,10 +349,10 @@
     });
     return c;
   }
-  function generateInitialStats(pos, ceiling) {
+  function generateInitialStats(pos, ceiling, ageBoost = 0) {
     const s = {};
     Object.keys(ceiling).forEach((k) => {
-      const r = 0.52 + Math.random() * 0.22;
+      const r = 0.52 + Math.random() * 0.22 + ageBoost;
       s[k] = Math.max(38, Math.min(ceiling[k], Math.round(ceiling[k] * r)));
     });
     if (pos === "C") s.speed = Math.min(s.speed, 62);
@@ -639,7 +639,7 @@
     const list = Object.values(saves).sort((a, b) => b.savedAt - a.savedAt);
     return /* @__PURE__ */ react_shim_default.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff", fontFamily: "sans-serif" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "linear-gradient(180deg,#1a1a2e,#0a0a0f)", padding: "48px 20px 28px", textAlign: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 5, marginBottom: 10 } }, "NBA CAREER MODE"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 38, fontWeight: 900, letterSpacing: 3 } }, "MY CAREER")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 20, maxWidth: 460, margin: "0 auto" } }, /* @__PURE__ */ react_shim_default.createElement("button", { onClick: onNew, style: { width: "100%", padding: "18px 0", fontSize: 17, fontWeight: 700, background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 14, color: "#000", cursor: "pointer", fontFamily: "sans-serif", marginBottom: 24 } }, "+ \u65B0\u5EFA\u751F\u6DAF"), list.length === 0 ? /* @__PURE__ */ react_shim_default.createElement("div", { style: { textAlign: "center", padding: "40px 0", color: "#444" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 32, marginBottom: 12 } }, "\u{1F3C0}"), /* @__PURE__ */ react_shim_default.createElement("div", null, "\u8FD8\u6CA1\u6709\u5B58\u6863\uFF0C\u521B\u5EFA\u4F60\u7684\u7B2C\u4E00\u4E2A\u751F\u6DAF")) : list.map((sv) => {
       const tm = ALL_TEAMS.find((t) => t.abbr === sv.teamAbbr) || ALL_TEAMS[0];
-      return /* @__PURE__ */ react_shim_default.createElement("div", { key: sv.id, style: { background: "#111827", borderRadius: 14, marginBottom: 12, overflow: "hidden", border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: tm.color, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: tm.accent } }, sv.playerName), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: tm.accent } }, tm.abbr)), /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: "12px 14px" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 12, fontSize: 13, marginBottom: 8 } }, /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#888" } }, sv.position, " \xB7 ", sv.archetype), /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#f9a01b" } }, "OVR ", sv.overall)), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 12, fontSize: 12, color: "#666", marginBottom: 12 } }, /* @__PURE__ */ react_shim_default.createElement("span", null, "\u7B2C", sv.season || 1, "\u8D5B\u5B63"), /* @__PURE__ */ react_shim_default.createElement("span", null, sv.wins, "\u80DC", sv.losses, "\u8D1F"), /* @__PURE__ */ react_shim_default.createElement("span", null, "$", sv.salary || 2.5, "M/\u5E74"), sv.injured && /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#ff6b6b" } }, "\u{1F915}\u4F24\u75C5")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => onLoad(sv.id), style: { flex: 1, padding: "10px 0", background: tm.color, border: "none", borderRadius: 10, color: tm.accent, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "sans-serif" } }, "\u7EE7\u7EED\u6E38\u620F"), del === sv.id ? /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => doDelete(sv.id), style: { padding: "10px 12px", background: "#ff4444", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u786E\u8BA4\u5220\u9664"), /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setDel(null), style: { padding: "10px 12px", background: "#333", border: "none", borderRadius: 10, color: "#aaa", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u53D6\u6D88")) : /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setDel(sv.id), style: { padding: "10px 12px", background: "#1a1a2e", border: "1px solid #ffffff11", borderRadius: 10, color: "#555", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5220\u9664"))));
+      return /* @__PURE__ */ react_shim_default.createElement("div", { key: sv.id, style: { background: "#111827", borderRadius: 14, marginBottom: 12, overflow: "hidden", border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: tm.color, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: tm.accent } }, sv.playerName), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: tm.accent } }, tm.abbr)), /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: "12px 14px" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 12, fontSize: 13, marginBottom: 8 } }, /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#888" } }, sv.position, " \xB7 ", sv.archetype), /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#f9a01b" } }, "OVR ", sv.overall)), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 12, fontSize: 12, color: "#666", marginBottom: 12 } }, /* @__PURE__ */ react_shim_default.createElement("span", null, "\u7B2C", sv.season || 1, "\u8D5B\u5B63"), sv.age && /* @__PURE__ */ react_shim_default.createElement("span", null, sv.age, "\u5C81"), /* @__PURE__ */ react_shim_default.createElement("span", null, sv.wins, "\u80DC", sv.losses, "\u8D1F"), /* @__PURE__ */ react_shim_default.createElement("span", null, "$", sv.salary || 2.5, "M/\u5E74"), sv.injured && /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#ff6b6b" } }, "\u{1F915}\u4F24\u75C5")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => onLoad(sv.id), style: { flex: 1, padding: "10px 0", background: tm.color, border: "none", borderRadius: 10, color: tm.accent, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "sans-serif" } }, "\u7EE7\u7EED\u6E38\u620F"), del === sv.id ? /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => doDelete(sv.id), style: { padding: "10px 12px", background: "#ff4444", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u786E\u8BA4\u5220\u9664"), /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setDel(null), style: { padding: "10px 12px", background: "#333", border: "none", borderRadius: 10, color: "#aaa", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u53D6\u6D88")) : /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setDel(sv.id), style: { padding: "10px 12px", background: "#1a1a2e", border: "1px solid #ffffff11", borderRadius: 10, color: "#555", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5220\u9664"))));
     })));
   }
   function CreateScreen({ onDone, onBack }) {
@@ -648,13 +648,15 @@
     const [arc, setArc] = useState("");
     const [custom, setCustom] = useState(false);
     const [ctext, setCtext] = useState("");
+    const [age, setAge] = useState(19);
     const finalArc = custom ? ctext : arc;
     function submit() {
       if (!name.trim() || !finalArc.trim()) return;
       const ceiling = generatePotential(pos, finalArc);
-      const stats = generateInitialStats(pos, ceiling);
+      const ageBoost = age >= 23 ? 0.05 : age <= 19 ? -0.03 : 0;
+      const stats = generateInitialStats(pos, ceiling, ageBoost);
       const physicals = generatePhysicals(pos);
-      onDone({ name: name.trim(), position: pos, archetype: finalArc.trim(), stats, ceiling, overall: calcOverall(stats), physicals });
+      onDone({ name: name.trim(), position: pos, archetype: finalArc.trim(), stats, ceiling, overall: calcOverall(stats), physicals, age });
     }
     return /* @__PURE__ */ react_shim_default.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff", fontFamily: "sans-serif" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "linear-gradient(180deg,#1a1a2e,#0a0a0f)", padding: "32px 20px 20px", display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ react_shim_default.createElement("button", { onClick: onBack, style: { background: "#ffffff11", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "sans-serif", fontSize: 13 } }, "\u8FD4\u56DE"), /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 3 } }, "NEW CAREER"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 24, fontWeight: 900 } }, "\u521B\u5EFA\u7403\u5458"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 20, maxWidth: 440, margin: "0 auto" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 18 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 2, marginBottom: 8 } }, "\u7403\u5458\u59D3\u540D"), /* @__PURE__ */ react_shim_default.createElement(
       "input",
@@ -712,7 +714,17 @@
         placeholder: "\u4F8B\u5982\uFF1A\u5168\u80FD\u6447\u6446\u4EBA\u3001\u7A7A\u95F4\u578B\u5927\u524D\u950B...",
         style: { width: "100%", padding: "14px 16px", background: "#111827", border: "1px solid #00ff8844", borderRadius: 10, color: "#00ff88", fontSize: 15, boxSizing: "border-box", outline: "none", fontFamily: "sans-serif" }
       }
-    ), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#666", marginTop: 6 } }, "AI\u4F1A\u6839\u636E\u4F60\u7684\u98CE\u683C\u751F\u6210\u89E3\u8BF4"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#0f1923", borderRadius: 10, padding: 14, marginBottom: 20, border: "1px solid #f9a01b22" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", marginBottom: 4 } }, "\u26A0 \u6F5C\u529B\u8BF4\u660E"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#888", lineHeight: 1.6 } }, "\u5C5E\u6027\u4E0A\u9650\u5B8C\u5168\u968F\u673A\uFF0C\u8EAB\u4F53\u5929\u8D4B\u4E5F\u5404\u4E0D\u76F8\u540C\u3002\u4F24\u75C5\u53EF\u80FD\u6C38\u4E45\u9650\u5236\u6210\u957F\u7A7A\u95F4\u3002\u53D1\u6325\u6253\u6CD5\u7279\u70B9\u624D\u80FD\u6700\u5927\u5316\u6F5C\u529B\u3002")), /* @__PURE__ */ react_shim_default.createElement(
+    ), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#666", marginTop: 6 } }, "AI\u4F1A\u6839\u636E\u4F60\u7684\u98CE\u683C\u751F\u6210\u89E3\u8BF4"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 18 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 2 } }, "\u5165\u8054\u5E74\u9F84"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: "#fff", fontWeight: 700 } }, age, " \u5C81")), /* @__PURE__ */ react_shim_default.createElement(
+      "input",
+      {
+        type: "range",
+        min: "18",
+        max: "26",
+        value: age,
+        onChange: (e) => setAge(parseInt(e.target.value)),
+        style: { width: "100%", accentColor: "#f9a01b" }
+      }
+    ), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 10, color: "#555", marginTop: 4 } }, /* @__PURE__ */ react_shim_default.createElement("span", null, "18 \xB7 \u9AD8\u6F5C\u529B"), /* @__PURE__ */ react_shim_default.createElement("span", null, "22"), /* @__PURE__ */ react_shim_default.createElement("span", null, "26 \xB7 \u5DF2\u6210\u719F")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#666", marginTop: 6, lineHeight: 1.5 } }, "\u5E74\u9F84\u8D8A\u5927\u521D\u59CB\u5C5E\u6027\u8D8A\u9AD8\uFF0C\u4F46\u751F\u6DAF\u8D8A\u77ED\u300232 \u5C81\u540E\u6F5C\u529B\u5F00\u59CB\u8870\u9000\u3002")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#0f1923", borderRadius: 10, padding: 14, marginBottom: 20, border: "1px solid #f9a01b22" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", marginBottom: 4 } }, "\u26A0 \u6F5C\u529B\u8BF4\u660E"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#888", lineHeight: 1.6 } }, "\u5C5E\u6027\u4E0A\u9650\u5B8C\u5168\u968F\u673A\uFF0C\u8EAB\u4F53\u5929\u8D4B\u4E5F\u5404\u4E0D\u76F8\u540C\u3002\u4F24\u75C5\u53EF\u80FD\u6C38\u4E45\u9650\u5236\u6210\u957F\u7A7A\u95F4\u3002\u53D1\u6325\u6253\u6CD5\u7279\u70B9\u624D\u80FD\u6700\u5927\u5316\u6F5C\u529B\u3002")), /* @__PURE__ */ react_shim_default.createElement(
       "button",
       {
         onClick: submit,
@@ -798,7 +810,7 @@
       simming ? "\u6A21\u62DF\u4E2D..." : "\u25B6 \u6A21\u62DF\u7B2C" + (myWins + oppWins + 1) + "\u573A"
     ));
   }
-  function PlayoffView({ bracket, myTeam, onSimGame, simming, onOffseason, ac, narrative, narrativeCtx }) {
+  function PlayoffView({ bracket, myTeam, onSimGame, simming, onOffseason, onAutoSimAll, ac, narrative, narrativeCtx }) {
     const [tab, setTab] = useState(() => myTeam.conf === "West" ? "west" : "east");
     if (!bracket) return null;
     function getAllSeries(conf) {
@@ -816,15 +828,23 @@
     const myConfSeries = getAllSeries(myTeam.conf === "West" ? bracket.west : bracket.east);
     const isMyOut = myConfSeries.some((s) => (s.teamA.abbr === myTeam.abbr || s.teamB.abbr === myTeam.abbr) && s.winner && s.winner !== myTeam.abbr);
     const myNotIn = !myConfSeries.some((s) => s.teamA.abbr === myTeam.abbr || s.teamB.abbr === myTeam.abbr);
-    return /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 14 } }, nextActiveSeries && !champion && /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 10, padding: "12px 14px", marginBottom: 12, border: "1px solid " + ac + "44", display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888" } }, "\u4E0B\u4E00\u573A"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#ccc" } }, nextActiveSeries.teamA.abbr, " vs ", nextActiveSeries.teamB.abbr, " \xB7 ", nextActiveSeries.round)), /* @__PURE__ */ react_shim_default.createElement(
+    return /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 14 } }, nextActiveSeries && !champion && /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 10, padding: "12px 14px", marginBottom: 12, border: "1px solid " + ac + "44", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888" } }, "\u4E0B\u4E00\u573A"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#ccc" } }, nextActiveSeries.teamA.abbr, " vs ", nextActiveSeries.teamB.abbr, " \xB7 ", nextActiveSeries.round)), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ react_shim_default.createElement(
       "button",
       {
         onClick: () => onSimGame(nextActiveSeries),
         disabled: simming,
-        style: { padding: "9px 18px", background: simming ? "#222" : myTeam.color, border: "1px solid " + (simming ? "#333" : ac), borderRadius: 9, color: simming ? "#444" : ac, fontWeight: 700, fontSize: 13, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" }
+        style: { padding: "9px 14px", background: simming ? "#222" : myTeam.color, border: "1px solid " + (simming ? "#333" : ac), borderRadius: 9, color: simming ? "#444" : ac, fontWeight: 700, fontSize: 13, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" }
       },
-      simming ? "\u6A21\u62DF\u4E2D..." : "\u25B6 \u6A21\u62DF"
-    )), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } }, [["west", "\u897F\u90E8"], ["east", "\u4E1C\u90E8"]].map(([v, l]) => /* @__PURE__ */ react_shim_default.createElement(
+      simming ? "\u6A21\u62DF\u4E2D..." : "\u25B6 \u5355\u573A"
+    ), onAutoSimAll && /* @__PURE__ */ react_shim_default.createElement(
+      "button",
+      {
+        onClick: onAutoSimAll,
+        disabled: simming,
+        style: { padding: "9px 14px", background: simming ? "#222" : "#1a1a0d", border: "1px solid " + (simming ? "#333" : "#f9a01b66"), borderRadius: 9, color: simming ? "#444" : "#f9a01b", fontWeight: 700, fontSize: 13, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" }
+      },
+      "\u23E9 \u5168\u90E8"
+    ))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } }, [["west", "\u897F\u90E8"], ["east", "\u4E1C\u90E8"]].map(([v, l]) => /* @__PURE__ */ react_shim_default.createElement(
       "button",
       {
         key: v,
@@ -919,7 +939,7 @@
     };
   }
   function MainScreen({ saveId, init, onQuit }) {
-    const [player, setPlayer] = useState(init.player);
+    const [player, setPlayer] = useState(() => ({ ...init.player, age: init.player.age || 19 }));
     const [team, setTeam] = useState(init.team);
     const [season, setSeason] = useState(init.season || 1);
     const [phase, setPhase] = useState(init.phase || "regular");
@@ -967,11 +987,23 @@
     const [tradeResult, setTradeResult] = useState(null);
     const [tradeLoading, setTradeLoading] = useState(false);
     const [restModal, setRestModal] = useState(false);
+    const [retireModal, setRetireModal] = useState(false);
+    const [retired, setRetired] = useState(false);
     const [restInput, setRestInput] = useState(1);
     const played = regularGames.filter((g) => g.status !== "upcoming");
     const wins = regularGames.filter((g) => g.status === "won").length;
     const seasonOver = regularGames.filter((g) => g.status === "upcoming").length === 0;
     const totalAlloc = Object.values(trainAlloc).reduce((a, b) => a + b, 0);
+    const maxTrainPoints = useMemo(() => {
+      let pts = 6;
+      if (avg.pts > 25 && avg.ast > 5 && wins > 50 && player.overall > 85) pts += 2;
+      else if (avg.pts > 20 && wins > 41) pts += 1;
+      const age = player.age || 19;
+      if (age < 25) pts += 1;
+      if (age > 30) pts -= 1;
+      if (age > 35) pts -= 1;
+      return Math.max(3, Math.min(9, pts));
+    }, [avg.pts, avg.ast, wins, player.overall, player.age]);
     const avg = useMemo(() => {
       const pg = played.filter((g) => g.stats);
       if (!pg.length) return { pts: 0, ast: 0, reb: 0, stl: 0, blk: 0 };
@@ -987,6 +1019,7 @@
         position: player.position,
         archetype: player.archetype,
         overall: player.overall,
+        age: player.age,
         teamAbbr: team.abbr,
         wins,
         losses: played.length - wins,
@@ -1017,7 +1050,8 @@
         ownedCars,
         ownedHouse,
         currentRental,
-        faOffers
+        faOffers,
+        retired
       };
       writeSaves(saves);
       setSaveMsg("\u5DF2\u4FDD\u5B58 \u2713");
@@ -1035,11 +1069,12 @@
       };
     }, [regularGames, playoffBracket]);
     function checkNewInjury() {
-      const chance = 0.02;
+      const ageBonus = Math.max(0, (player.age || 22) - 30) * 5e-3;
+      const chance = 0.02 + ageBonus;
       if (Math.random() < chance) {
         const t = INJURY_TYPES[Math.floor(Math.random() * INJURY_TYPES.length)];
-        const g = t.minG + Math.floor(Math.random() * (t.maxG - t.minG + 1));
-        return { name: t.name, gamesLeft: g, affectedStats: t.stats, severity: t.severity };
+        const d = t.minDays + Math.floor(Math.random() * (t.maxDays - t.minDays + 1));
+        return { name: t.name, daysLeft: d, affectedStats: t.stats, severity: t.severity };
       }
       return null;
     }
@@ -1083,14 +1118,18 @@
       let newInjLog = [...injuryLog];
       let newRels = { ...relationships };
       let injEvent = null;
+      let prevDate = null;
       for (let i = 0; i < games.length; i++) {
         const g = games[i];
+        const curDate = new Date(g.date);
+        const elapsedDays = prevDate ? Math.max(1, Math.round((curDate.getTime() - prevDate.getTime()) / 864e5)) : 1;
+        prevDate = curDate;
         const isResting = curRest > 0;
         if (isResting) {
           curRest--;
         } else if (curInj) {
-          curInj = { ...curInj, gamesLeft: curInj.gamesLeft - 1 };
-          if (curInj.gamesLeft <= 0) {
+          curInj = { ...curInj, daysLeft: (curInj.daysLeft || 0) - elapsedDays };
+          if (curInj.daysLeft <= 0) {
             newInjLog.push({ name: curInj.name, date: g.date, type: "recovered" });
             injEvent = "\u{1F7E2} \u5DF2\u4ECE\u300C" + curInj.name + "\u300D\u4E2D\u6062\u590D\uFF01";
             curInj = null;
@@ -1099,8 +1138,8 @@
           const ni = checkNewInjury();
           if (ni) {
             curInj = ni;
-            newInjLog.push({ name: ni.name, date: g.date, games: ni.gamesLeft, type: "injured" });
-            injEvent = "\u{1F534} \u53D7\u4F24\uFF01" + ni.name + "\uFF0C\u9884\u8BA1\u7F3A\u5E2D " + ni.gamesLeft + " \u573A";
+            newInjLog.push({ name: ni.name, date: g.date, days: ni.daysLeft, type: "injured" });
+            injEvent = "\u{1F534} \u53D7\u4F24\uFF01" + ni.name + "\uFF0C\u9884\u8BA1\u7F3A\u5E2D " + ni.daysLeft + " \u5929";
           }
         }
         const res = simOneGame(curInj, isResting);
@@ -1163,8 +1202,8 @@
             let newInjLog = [...injuryLog];
             let injEvent = null;
             if (curInj) {
-              curInj = { ...curInj, gamesLeft: curInj.gamesLeft - 1 };
-              if (curInj.gamesLeft <= 0) {
+              curInj = { ...curInj, daysLeft: (curInj.daysLeft || 0) - 2 };
+              if (curInj.daysLeft <= 0) {
                 newInjLog.push({ name: curInj.name, date: nextG.date, type: "recovered" });
                 injEvent = "\u{1F7E2} \u5DF2\u6062\u590D\uFF01";
                 curInj = null;
@@ -1173,7 +1212,7 @@
               const ni = checkNewInjury();
               if (ni) {
                 curInj = ni;
-                newInjLog.push({ name: ni.name, date: nextG.date, games: ni.gamesLeft, type: "injured" });
+                newInjLog.push({ name: ni.name, date: nextG.date, days: ni.daysLeft, type: "injured" });
                 injEvent = "\u{1F534} \u53D7\u4F24\uFF01" + ni.name;
               }
             }
@@ -1207,8 +1246,8 @@
           let newInjLog = [...injuryLog];
           let injEvent = null;
           if (curInj) {
-            curInj = { ...curInj, gamesLeft: curInj.gamesLeft - 1 };
-            if (curInj.gamesLeft <= 0) {
+            curInj = { ...curInj, daysLeft: (curInj.daysLeft || 0) - 2 };
+            if (curInj.daysLeft <= 0) {
               newInjLog.push({ name: curInj.name, date: nextG.date, type: "recovered" });
               injEvent = "\u{1F7E2} \u5DF2\u6062\u590D\uFF01";
               curInj = null;
@@ -1217,7 +1256,7 @@
             const ni = checkNewInjury();
             if (ni) {
               curInj = ni;
-              newInjLog.push({ name: ni.name, date: nextG.date, games: ni.gamesLeft, type: "injured" });
+              newInjLog.push({ name: ni.name, date: nextG.date, days: ni.daysLeft, type: "injured" });
               injEvent = "\u{1F534} \u53D7\u4F24\uFF01" + ni.name;
             }
           }
@@ -1294,7 +1333,7 @@
     function allocTrain(stat, delta) {
       const c = trainAlloc[stat];
       if (c + delta < 0) return;
-      if (delta > 0 && totalAlloc >= 6) return;
+      if (delta > 0 && totalAlloc >= maxTrainPoints) return;
       setTrainAlloc({ ...trainAlloc, [stat]: c + delta });
     }
     function confirmTraining() {
@@ -1306,8 +1345,46 @@
       setOffseasonDone(true);
       setTrainAlloc({ speed: 0, shooting: 0, passing: 0, defense: 0, strength: 0, iq: 0 });
     }
+    async function autoSimAllPlayoffs() {
+      if (!playoffBracket || playoffBracket.champion) return;
+      for (let safety = 0; safety < 200; safety++) {
+        const allSeries = [];
+        if (playoffBracket.west) ["r1", "r2", "r3"].forEach((k) => (playoffBracket.west[k] || []).forEach((s) => allSeries.push(s)));
+        if (playoffBracket.east) ["r1", "r2", "r3"].forEach((k) => (playoffBracket.east[k] || []).forEach((s) => allSeries.push(s)));
+        if (playoffBracket.finals) allSeries.push(playoffBracket.finals);
+        const next = allSeries.find((s) => !s.winner);
+        if (!next) break;
+        await simPlayoffGame(next);
+        await new Promise((r) => setTimeout(r, 30));
+      }
+    }
     function startNextSeason() {
       if (freeAgent && !contractOffer) return;
+      if (injury) {
+        const newDays = (injury.daysLeft || 0) - 120;
+        if (newDays <= 0) {
+          setInjuryLog((prev) => [...prev, { name: injury.name, date: (/* @__PURE__ */ new Date()).toISOString(), type: "recovered" }]);
+          setInjury(null);
+        } else {
+          setInjury({ ...injury, daysLeft: newDays });
+        }
+      }
+      setResting(0);
+      const newAge = (player.age || 19) + 1;
+      let decayedCeiling = { ...player.ceiling };
+      let decayedStats = { ...player.stats };
+      if (newAge >= 32) {
+        const statKeys = Object.keys(decayedCeiling);
+        const numToDecay = Math.random() < 0.5 ? 1 : 2;
+        const shuffled = [...statKeys].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < numToDecay; i++) {
+          const k = shuffled[i];
+          const drop = 1 + Math.floor(Math.random() * 2);
+          decayedCeiling[k] = Math.max(40, decayedCeiling[k] - drop);
+          decayedStats[k] = Math.min(decayedStats[k], decayedCeiling[k]);
+        }
+      }
+      setPlayer((prev) => ({ ...prev, age: newAge, ceiling: decayedCeiling, stats: decayedStats, overall: calcOverall(decayedStats) }));
       const ns = season + 1;
       const sy = 2024 + (ns - 1);
       setSeason(ns);
@@ -1383,10 +1460,10 @@
     function getHealthStatus() {
       if (resting > 0) return { label: "\u4E3B\u52A8\u4F11\u6218", color: "#88aaff", icon: "\u{1F634}", detail: "\u8FD8\u6709 " + resting + " \u573A\u4F11\u6218" };
       if (!injury) return { label: "\u72B6\u6001\u5065\u5EB7", color: "#00ff88", icon: "\u2705", detail: "\u8EAB\u4F53\u65E0\u5F02\u6837" };
-      if (injury.severity === "\u8D5B\u5B63\u62A5\u9500") return { label: "\u8D5B\u5B63\u62A5\u9500", color: "#ff2244", icon: "\u{1F691}", detail: injury.name + " \xB7 \u7F3A\u5E2D " + injury.gamesLeft + " \u573A" };
-      if (injury.severity === "\u91CD\u4F24") return { label: "\u91CD\u4F24", color: "#ff4444", icon: "\u{1F915}", detail: injury.name + " \xB7 \u7F3A\u5E2D " + injury.gamesLeft + " \u573A" };
-      if (injury.severity === "\u4E2D\u4F24") return { label: "\u8F7B\u4E2D\u5EA6\u4F24\u75C5", color: "#ff8844", icon: "\u{1F915}", detail: injury.name + " \xB7 \u7F3A\u5E2D " + injury.gamesLeft + " \u573A" };
-      return { label: "\u8F7B\u4F24", color: "#ffaa44", icon: "\u{1F915}", detail: injury.name + " \xB7 \u7F3A\u5E2D " + injury.gamesLeft + " \u573A" };
+      if (injury.severity === "\u8D5B\u5B63\u62A5\u9500") return { label: "\u8D5B\u5B63\u62A5\u9500", color: "#ff2244", icon: "\u{1F691}", detail: injury.name + " \xB7 \u8FD8\u9700 " + (injury.daysLeft || 0) + " \u5929" };
+      if (injury.severity === "\u91CD\u4F24") return { label: "\u91CD\u4F24", color: "#ff4444", icon: "\u{1F915}", detail: injury.name + " \xB7 \u8FD8\u9700 " + (injury.daysLeft || 0) + " \u5929" };
+      if (injury.severity === "\u4E2D\u4F24") return { label: "\u8F7B\u4E2D\u5EA6\u4F24\u75C5", color: "#ff8844", icon: "\u{1F915}", detail: injury.name + " \xB7 \u8FD8\u9700 " + (injury.daysLeft || 0) + " \u5929" };
+      return { label: "\u8F7B\u4F24", color: "#ffaa44", icon: "\u{1F915}", detail: injury.name + " \xB7 \u8FD8\u9700 " + (injury.daysLeft || 0) + " \u5929" };
     }
     const health = getHealthStatus();
     async function loadRelStory(key) {
@@ -1407,10 +1484,20 @@
       setTradeLoading(false);
     }
     const ph = player.physicals || { heightCm: 188, wingspanCm: 191, wingDelta: 3, weightKg: 88, staticTraits: ["\u5F39\u8DF3\u7CBE\u82F1"], dynamicTraits: ["\u6321\u62C6\u9AD8\u624B"] };
+    if (retired) {
+      return /* @__PURE__ */ react_shim_default.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff", fontFamily: "sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 64, marginBottom: 16 } }, "\u{1F3C6}"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 4, marginBottom: 8 } }, "CAREER COMPLETE"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 28, fontWeight: 900, marginBottom: 6, textAlign: "center" } }, player.name), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: "#aaa", marginBottom: 24, textAlign: "center" } }, team.city, " ", team.name, " \xB7 ", player.position, " \xB7 ", player.age, " \u5C81"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 20, marginBottom: 16, minWidth: 280, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 2, marginBottom: 10 } }, "\u751F\u6DAF\u603B\u89C8"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13 } }, /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#888" } }, "\u8D5B\u5B63\u6570"), /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontWeight: 700 } }, season)), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13 } }, /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#888" } }, "\u9000\u5F79 OVR"), /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontWeight: 700, color: "#f9a01b" } }, player.overall)), seasonAwards && seasonAwards.iChampion && /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13 } }, /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#888" } }, "\u603B\u51A0\u519B"), /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#ffd700" } }, "\u{1F3C6} \u81F3\u5C11 1 \u6B21"))), /* @__PURE__ */ react_shim_default.createElement(
+        "button",
+        {
+          onClick: onQuit,
+          style: { padding: "14px 36px", background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 12, color: "#000", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "sans-serif" }
+        },
+        "\u8FD4\u56DE\u5B58\u6863\u5927\u5385"
+      ));
+    }
     return /* @__PURE__ */ react_shim_default.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff", fontFamily: "sans-serif", paddingBottom: 80 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: team.color, padding: "12px 16px" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => {
       doSave();
       onQuit();
-    }, style: { background: "rgba(0,0,0,0.3)", border: "none", color: "#fff", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontFamily: "sans-serif", fontSize: 12 } }, "\u2190 \u5B58\u6863"), /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: ac } }, player.name), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, opacity: 0.8 } }, team.city, " ", team.name, " \xB7 S", season, " \xB7 $", contract.salary, "M"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 16, fontWeight: 700 } }, wins, "\u80DC ", played.length - wins, "\u8D1F"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 6, justifyContent: "flex-end", fontSize: 11 } }, /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: ac } }, "OVR ", player.overall), /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: health.color } }, health.icon, " ", health.label), saveMsg && /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#00ff88" } }, saveMsg))))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", background: "#0d0d14", borderBottom: "1px solid #ffffff0d", overflowX: "auto" } }, [["calendar", "\u{1F4C5} \u8D5B\u7A0B"], ["playoffs", "\u{1F3C6} \u5B63\u540E\u8D5B"], ["standings", "\u{1F4CB} \u6218\u7EE9"], ["player", "\u{1F9EC} \u7403\u5458"], ["stats", "\u{1F4CA} \u6570\u636E"], ["offseason", "\u{1F3CB} \u8BAD\u7EC3"], ["relations", "\u{1F465} \u4EBA\u9645"], ["agent", "\u{1F4B0} \u7ECF\u7EAA"], ["finances", "\u{1F3E0} \u8D22\u4EA7"]].map(([v, l]) => /* @__PURE__ */ react_shim_default.createElement(
+    }, style: { background: "rgba(0,0,0,0.3)", border: "none", color: "#fff", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontFamily: "sans-serif", fontSize: 12 } }, "\u2190 \u5B58\u6863"), /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: ac } }, player.name), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, opacity: 0.8 } }, team.city, " ", team.name, " \xB7 S", season, " \xB7 ", player.age, "\u5C81 \xB7 $", contract.salary, "M"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 16, fontWeight: 700 } }, wins, "\u80DC ", played.length - wins, "\u8D1F"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 6, justifyContent: "flex-end", fontSize: 11 } }, /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: ac } }, "OVR ", player.overall), /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: health.color } }, health.icon, " ", health.label), saveMsg && /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#00ff88" } }, saveMsg))))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", background: "#0d0d14", borderBottom: "1px solid #ffffff0d", overflowX: "auto" } }, [["calendar", "\u{1F4C5} \u8D5B\u7A0B"], ["playoffs", "\u{1F3C6} \u5B63\u540E\u8D5B"], ["standings", "\u{1F4CB} \u6218\u7EE9"], ["player", "\u{1F9EC} \u7403\u5458"], ["stats", "\u{1F4CA} \u6570\u636E"], ["offseason", "\u{1F3CB} \u8BAD\u7EC3"], ["relations", "\u{1F465} \u4EBA\u9645"], ["agent", "\u{1F4B0} \u7ECF\u7EAA"], ["finances", "\u{1F3E0} \u8D22\u4EA7"]].map(([v, l]) => /* @__PURE__ */ react_shim_default.createElement(
       "button",
       {
         key: v,
@@ -1428,7 +1515,13 @@
         myTeam: team,
         onSimGame: simPlayoffGame,
         simming,
-        onOffseason: () => setPhase("offseason"),
+        onOffseason: async () => {
+          if (!playoffBracket?.champion) {
+            await autoSimAllPlayoffs();
+          }
+          setPhase("offseason");
+        },
+        onAutoSimAll: autoSimAllPlayoffs,
         ac,
         narrative,
         narrativeCtx
@@ -1452,7 +1545,7 @@
         style: { padding: "8px 14px", background: "#1a1a2e", border: "1px solid #ffaa4444", borderRadius: 10, color: "#ffaa44", fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" }
       },
       "\u53D6\u6D88\u4F11\u6218"
-    ))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { height: 8, background: "#1a1a2e", borderRadius: 4, overflow: "hidden" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { height: "100%", width: (resting > 0 ? 60 : injury ? Math.max(20, (1 - injury.gamesLeft / 60) * 100) : 100) + "%", background: health.color, borderRadius: 4, transition: "width 0.5s" } }))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, marginBottom: 12, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 12 } }, "\u8EAB\u4F53\u5929\u8D4B\uFF08\u9759\u6001\uFF09"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a1a2e", borderRadius: 10, padding: "10px 12px", flex: "1 1 80px", textAlign: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#555", marginBottom: 3 } }, "\u8EAB\u9AD8"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 17, fontWeight: 700, color: ac } }, ph.heightCm, /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 11, color: "#666" } }, "cm"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a1a2e", borderRadius: 10, padding: "10px 12px", flex: "1 1 80px", textAlign: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#555", marginBottom: 3 } }, "\u81C2\u5C55"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 17, fontWeight: 700, color: "#ccc" } }, ph.wingspanCm, /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 11, color: "#666" } }, "cm")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 9, color: ph.wingDelta >= 6 ? "#00ff88" : ph.wingDelta < 0 ? "#ff8888" : "#888" } }, ph.wingDelta > 0 ? "+" + ph.wingDelta : ph.wingDelta, "cm")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a1a2e", borderRadius: 10, padding: "10px 12px", flex: "1 1 80px", textAlign: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#555", marginBottom: 3 } }, "\u4F53\u91CD"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 17, fontWeight: 700, color: "#ccc" } }, ph.weightKg, /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 11, color: "#666" } }, "kg")))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, ph.staticTraits.map((t, i) => /* @__PURE__ */ react_shim_default.createElement("div", { key: i, style: { background: "#f9a01b22", borderRadius: 20, padding: "5px 14px", fontSize: 12, color: "#f9a01b", border: "1px solid #f9a01b33" } }, t)))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, marginBottom: 12, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 12 } }, "\u52A8\u6001\u5929\u8D4B\uFF08\u6280\u672F\u7279\u70B9\uFF09"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, ph.dynamicTraits.map((t, i) => /* @__PURE__ */ react_shim_default.createElement("div", { key: i, style: { background: ac + "22", borderRadius: 20, padding: "6px 14px", fontSize: 12, color: ac, border: "1px solid " + ac + "33" } }, t))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#555", marginTop: 10 } }, "\u52A8\u6001\u5929\u8D4B\u4F1A\u5F71\u54CD\u6BD4\u8D5B\u6A21\u62DF\u4E2D\u7684\u6570\u636E\u52A0\u6210")), injuryLog.length > 0 && /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 10 } }, "\u4F24\u75C5\u5386\u53F2"), injuryLog.slice(-5).reverse().map((inj, i) => /* @__PURE__ */ react_shim_default.createElement("div", { key: i, style: { fontSize: 12, color: inj.type === "injured" ? "#ff8888" : "#88ff88", padding: "6px 0", borderBottom: "1px solid #ffffff06" } }, inj.type === "injured" ? "\u{1F534}" : "\u{1F7E2}", " ", inj.name, " ", fmtDate(inj.date), " ", inj.games ? "(" + inj.games + "\u573A)" : "(\u5DF2\u6108)")))), view === "calendar" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 14 } }, seasonOver && phase === "regular" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#0d1a2a", borderRadius: 10, padding: 12, marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid " + ac + "44" } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: ac } }, "\u5E38\u89C4\u8D5B\u5DF2\u7ED3\u675F"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888" } }, "\u524D\u5F80\u300C\u5B63\u540E\u8D5B\u300D\u6807\u7B7E\u7EE7\u7EED")), /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setView("playoffs"), style: { padding: "8px 16px", background: team.color, border: "1px solid " + ac, borderRadius: 8, color: ac, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u2192 \u5B63\u540E\u8D5B")), phase === "offseason" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a1a0d", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid #f9a01b44" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#f9a01b" } }, "\u2600 \u4F11\u8D5B\u671F"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888" } }, "\u524D\u5F80\u300C\u8BAD\u7EC3\u300D\u5F3A\u5316\u5C5E\u6027")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8, flexDirection: "column", alignItems: "flex-end" } }, seasonAwards && /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setShowAwards(true), style: { padding: "6px 12px", background: "#ffd70022", border: "1px solid #ffd70044", borderRadius: 8, color: "#ffd700", fontSize: 11, cursor: "pointer", fontFamily: "sans-serif" } }, "\u{1F3C6} \u67E5\u770B\u9881\u5956"), offseasonDone && !freeAgent && /* @__PURE__ */ react_shim_default.createElement("button", { onClick: startNextSeason, style: { padding: "6px 12px", background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 8, color: "#000", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5F00\u59CB S", season + 1), freeAgent && /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setContractModal(true), style: { padding: "6px 12px", background: "#2a0d0d", border: "1px solid #ff444444", borderRadius: 8, color: "#ff8888", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "sans-serif" } }, "\u26A0 \u81EA\u7531\u7403\u5458\uFF0C\u5F85\u7B7E")))), injury && /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#2a0d0d", borderRadius: 10, padding: "9px 14px", marginBottom: 10, border: "1px solid #ff444444" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#ff6b6b" } }, "\u{1F915} ", injury.name, " \xB7 \u8FD8\u9700 ", injury.gamesLeft, " \u573A")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } }, /* @__PURE__ */ react_shim_default.createElement("button", { onClick: prevMonth, style: { background: "#111827", border: "1px solid #ffffff22", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "sans-serif" } }, "\u2039"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, fontWeight: 700 } }, fmtMonthLabel(calYear, calMonth)), /* @__PURE__ */ react_shim_default.createElement("button", { onClick: nextMonth, style: { background: "#111827", border: "1px solid #ffffff22", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "sans-serif" } }, "\u203A")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 3 } }, ["\u65E5", "\u4E00", "\u4E8C", "\u4E09", "\u56DB", "\u4E94", "\u516D"].map((d) => /* @__PURE__ */ react_shim_default.createElement("div", { key: d, style: { textAlign: "center", fontSize: 10, color: "#444", padding: "3px 0" } }, d))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 } }, Array(firstDay).fill(null).map((_, i) => /* @__PURE__ */ react_shim_default.createElement("div", { key: "e" + i })), Array(daysInMonth).fill(null).map((_, i) => {
+    ))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { height: 8, background: "#1a1a2e", borderRadius: 4, overflow: "hidden" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { height: "100%", width: (resting > 0 ? 60 : injury ? Math.max(20, (1 - injury.gamesLeft / 60) * 100) : 100) + "%", background: health.color, borderRadius: 4, transition: "width 0.5s" } }))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, marginBottom: 12, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 12 } }, "\u8EAB\u4F53\u5929\u8D4B\uFF08\u9759\u6001\uFF09"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a1a2e", borderRadius: 10, padding: "10px 12px", flex: "1 1 80px", textAlign: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#555", marginBottom: 3 } }, "\u8EAB\u9AD8"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 17, fontWeight: 700, color: ac } }, ph.heightCm, /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 11, color: "#666" } }, "cm"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a1a2e", borderRadius: 10, padding: "10px 12px", flex: "1 1 80px", textAlign: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#555", marginBottom: 3 } }, "\u81C2\u5C55"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 17, fontWeight: 700, color: "#ccc" } }, ph.wingspanCm, /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 11, color: "#666" } }, "cm")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 9, color: ph.wingDelta >= 6 ? "#00ff88" : ph.wingDelta < 0 ? "#ff8888" : "#888" } }, ph.wingDelta > 0 ? "+" + ph.wingDelta : ph.wingDelta, "cm")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a1a2e", borderRadius: 10, padding: "10px 12px", flex: "1 1 80px", textAlign: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#555", marginBottom: 3 } }, "\u4F53\u91CD"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 17, fontWeight: 700, color: "#ccc" } }, ph.weightKg, /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 11, color: "#666" } }, "kg")))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, ph.staticTraits.map((t, i) => /* @__PURE__ */ react_shim_default.createElement("div", { key: i, style: { background: "#f9a01b22", borderRadius: 20, padding: "5px 14px", fontSize: 12, color: "#f9a01b", border: "1px solid #f9a01b33" } }, t)))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, marginBottom: 12, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 12 } }, "\u52A8\u6001\u5929\u8D4B\uFF08\u6280\u672F\u7279\u70B9\uFF09"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, ph.dynamicTraits.map((t, i) => /* @__PURE__ */ react_shim_default.createElement("div", { key: i, style: { background: ac + "22", borderRadius: 20, padding: "6px 14px", fontSize: 12, color: ac, border: "1px solid " + ac + "33" } }, t))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#555", marginTop: 10 } }, "\u52A8\u6001\u5929\u8D4B\u4F1A\u5F71\u54CD\u6BD4\u8D5B\u6A21\u62DF\u4E2D\u7684\u6570\u636E\u52A0\u6210")), injuryLog.length > 0 && /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 10 } }, "\u4F24\u75C5\u5386\u53F2"), injuryLog.slice(-5).reverse().map((inj, i) => /* @__PURE__ */ react_shim_default.createElement("div", { key: i, style: { fontSize: 12, color: inj.type === "injured" ? "#ff8888" : "#88ff88", padding: "6px 0", borderBottom: "1px solid #ffffff06" } }, inj.type === "injured" ? "\u{1F534}" : "\u{1F7E2}", " ", inj.name, " ", fmtDate(inj.date), " ", inj.games ? "(" + inj.games + "\u573A)" : "(\u5DF2\u6108)")))), view === "calendar" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 14 } }, seasonOver && phase === "regular" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#0d1a2a", borderRadius: 10, padding: 12, marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid " + ac + "44" } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: ac } }, "\u5E38\u89C4\u8D5B\u5DF2\u7ED3\u675F"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888" } }, "\u524D\u5F80\u300C\u5B63\u540E\u8D5B\u300D\u6807\u7B7E\u7EE7\u7EED")), /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setView("playoffs"), style: { padding: "8px 16px", background: team.color, border: "1px solid " + ac, borderRadius: 8, color: ac, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "sans-serif" } }, "\u2192 \u5B63\u540E\u8D5B")), phase === "offseason" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a1a0d", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid #f9a01b44" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#f9a01b" } }, "\u2600 \u4F11\u8D5B\u671F"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888" } }, "\u524D\u5F80\u300C\u8BAD\u7EC3\u300D\u5F3A\u5316\u5C5E\u6027")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8, flexDirection: "column", alignItems: "flex-end" } }, seasonAwards && /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setShowAwards(true), style: { padding: "6px 12px", background: "#ffd70022", border: "1px solid #ffd70044", borderRadius: 8, color: "#ffd700", fontSize: 11, cursor: "pointer", fontFamily: "sans-serif" } }, "\u{1F3C6} \u67E5\u770B\u9881\u5956"), offseasonDone && !freeAgent && /* @__PURE__ */ react_shim_default.createElement("button", { onClick: startNextSeason, style: { padding: "6px 12px", background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 8, color: "#000", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "sans-serif" } }, "\u5F00\u59CB S", season + 1), freeAgent && /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setContractModal(true), style: { padding: "6px 12px", background: "#2a0d0d", border: "1px solid #ff444444", borderRadius: 8, color: "#ff8888", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "sans-serif" } }, "\u26A0 \u81EA\u7531\u7403\u5458\uFF0C\u5F85\u7B7E")))), injury && /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#2a0d0d", borderRadius: 10, padding: "9px 14px", marginBottom: 10, border: "1px solid #ff444444" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#ff6b6b" } }, "\u{1F915} ", injury.name, " \xB7 \u8FD8\u9700 ", injury.daysLeft || 0, " \u5929")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } }, /* @__PURE__ */ react_shim_default.createElement("button", { onClick: prevMonth, style: { background: "#111827", border: "1px solid #ffffff22", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "sans-serif" } }, "\u2039"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, fontWeight: 700 } }, fmtMonthLabel(calYear, calMonth)), /* @__PURE__ */ react_shim_default.createElement("button", { onClick: nextMonth, style: { background: "#111827", border: "1px solid #ffffff22", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "sans-serif" } }, "\u203A")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 3 } }, ["\u65E5", "\u4E00", "\u4E8C", "\u4E09", "\u56DB", "\u4E94", "\u516D"].map((d) => /* @__PURE__ */ react_shim_default.createElement("div", { key: d, style: { textAlign: "center", fontSize: 10, color: "#444", padding: "3px 0" } }, d))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 } }, Array(firstDay).fill(null).map((_, i) => /* @__PURE__ */ react_shim_default.createElement("div", { key: "e" + i })), Array(daysInMonth).fill(null).map((_, i) => {
       const day = i + 1;
       const g = gamesByDay[day];
       const isUp = g && g.status === "upcoming";
@@ -1510,7 +1603,7 @@
       const cap = player.ceiling[k], gap = cap - v;
       const lbl = gap > 20 ? "\u{1F534} \u91CD\u70B9\u63D0\u5347" : gap > 10 ? "\u{1F7E1} \u6709\u7A7A\u95F4" : "\u{1F7E2} \u63A5\u8FD1\u4E0A\u9650";
       return /* @__PURE__ */ react_shim_default.createElement("div", { key: k, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid #ffffff06" } }, /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 13, color: "#ccc" } }, STAT_LABELS[k]), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: ac } }, v), /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 11, color: "#444" } }, "\u2192"), /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 13, color: "#666" } }, cap), /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 11 } }, lbl)));
-    }))), view === "offseason" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 14 } }, phase === "offseason" && !offseasonDone ? /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 14, marginBottom: 14, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, fontWeight: 700 } }, "\u8BAD\u7EC3\u70B9\u6570"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#555", marginTop: 2 } }, "\u6BCF\u70B9 +2\u5C5E\u6027\uFF08\u4E0D\u8D85\u4E2A\u4EBA\u4E0A\u9650\uFF09")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 28, fontWeight: 900, color: ac } }, 6 - totalAlloc))), TRAINING_OPTIONS.map((opt) => {
+    }))), view === "offseason" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 14 } }, phase === "offseason" && !offseasonDone ? /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 14, marginBottom: 14, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, fontWeight: 700 } }, "\u8BAD\u7EC3\u70B9\u6570"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#555", marginTop: 2 } }, "\u6BCF\u70B9 +2\u5C5E\u6027 \xB7 \u672C\u8D5B\u5B63\u603B\u989D ", maxTrainPoints, " \u70B9")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 28, fontWeight: 900, color: ac } }, maxTrainPoints - totalAlloc))), TRAINING_OPTIONS.map((opt) => {
       const alloc = trainAlloc[opt.stat], cur = player.stats[opt.stat], cap = player.ceiling[opt.stat];
       const proj = Math.min(cap, cur + alloc * 2), atCap = cur >= cap;
       return /* @__PURE__ */ react_shim_default.createElement("div", { key: opt.id, style: { background: "#111827", borderRadius: 12, padding: 14, marginBottom: 10, border: "1px solid " + (alloc > 0 ? ac + "44" : "#ffffff0d"), opacity: atCap ? 0.4 : 1 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, fontWeight: 700 } }, opt.icon, " ", opt.label), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#555", marginTop: 2 } }, opt.desc, atCap ? " \xB7 \u5DF2\u8FBE\u4E0A\u9650" : "")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#666" } }, STAT_LABELS[opt.stat], " /", cap), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: alloc > 0 ? "#00ff88" : ac } }, cur, alloc > 0 && /* @__PURE__ */ react_shim_default.createElement("span", { style: { fontSize: 12, color: "#00ff88" } }, " \u2192 ", proj)))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ react_shim_default.createElement(
@@ -1521,12 +1614,12 @@
           style: { width: 34, height: 34, borderRadius: 8, background: "#1a1a2e", border: "1px solid #ffffff22", color: alloc === 0 || atCap ? "#333" : "#fff", fontSize: 18, cursor: alloc === 0 || atCap ? "not-allowed" : "pointer", fontFamily: "sans-serif" }
         },
         "\u2212"
-      ), /* @__PURE__ */ react_shim_default.createElement("div", { style: { flex: 1, height: 7, background: "#1a1a2e", borderRadius: 4, overflow: "hidden" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { height: "100%", width: alloc / 6 * 100 + "%", background: ac, transition: "width 0.3s" } })), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: ac, minWidth: 18, textAlign: "center" } }, alloc), /* @__PURE__ */ react_shim_default.createElement(
+      ), /* @__PURE__ */ react_shim_default.createElement("div", { style: { flex: 1, height: 7, background: "#1a1a2e", borderRadius: 4, overflow: "hidden" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { height: "100%", width: alloc / maxTrainPoints * 100 + "%", background: ac, transition: "width 0.3s" } })), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: ac, minWidth: 18, textAlign: "center" } }, alloc), /* @__PURE__ */ react_shim_default.createElement(
         "button",
         {
           onClick: () => allocTrain(opt.stat, 1),
-          disabled: totalAlloc >= 6 || atCap,
-          style: { width: 34, height: 34, borderRadius: 8, background: totalAlloc >= 6 || atCap ? "#111" : "#1a2a1a", border: "1px solid " + (totalAlloc >= 6 || atCap ? "#333" : ac + "44"), color: totalAlloc >= 6 || atCap ? "#333" : ac, fontSize: 18, cursor: totalAlloc >= 6 || atCap ? "not-allowed" : "pointer", fontFamily: "sans-serif" }
+          disabled: totalAlloc >= maxTrainPoints || atCap,
+          style: { width: 34, height: 34, borderRadius: 8, background: totalAlloc >= maxTrainPoints || atCap ? "#111" : "#1a2a1a", border: "1px solid " + (totalAlloc >= maxTrainPoints || atCap ? "#333" : ac + "44"), color: totalAlloc >= maxTrainPoints || atCap ? "#333" : ac, fontSize: 18, cursor: totalAlloc >= maxTrainPoints || atCap ? "not-allowed" : "pointer", fontFamily: "sans-serif" }
         },
         "+"
       )));
@@ -1537,7 +1630,7 @@
         style: { width: "100%", padding: "15px 0", fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg,#f9a01b,#ffd700)", border: "none", borderRadius: 12, color: "#000", cursor: "pointer", fontFamily: "sans-serif", marginTop: 4 }
       },
       totalAlloc > 0 ? "\u786E\u8BA4\u8BAD\u7EC3\u8BA1\u5212" : "\u8DF3\u8FC7\u8BAD\u7EC3\uFF0C\u5F00\u59CB\u65B0\u8D5B\u5B63"
-    )) : offseasonDone ? /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a2a1a", borderRadius: 12, padding: 20, border: "1px solid #00ff8844", textAlign: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 24, marginBottom: 8 } }, "\u2705"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: "#00ff88" } }, "\u8BAD\u7EC3\u5DF2\u5B8C\u6210 \xB7 OVR ", player.overall), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: "#888", marginTop: 6 } }, "\u8FD4\u56DE\u8D5B\u7A0B\u9875\u5F00\u59CB\u65B0\u8D5B\u5B63")) : /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a1a0d", borderRadius: 12, padding: 20, textAlign: "center", border: "1px solid #f9a01b44" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, color: "#f9a01b" } }, "\u23F3 \u4F11\u8D5B\u671F\u8BAD\u7EC3\u5728\u8D5B\u5B63\u7ED3\u675F\u540E\u5F00\u653E"))), view === "relations" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 14 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 2, marginBottom: 12 } }, "\u7BA1\u7406\u5C42\u5173\u7CFB"), PERSON_TYPES.map((pt) => {
+    )) : offseasonDone ? /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a2a1a", borderRadius: 12, padding: 20, border: "1px solid #00ff8844", textAlign: "center", marginBottom: 14 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 24, marginBottom: 8 } }, "\u2705"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: "#00ff88" } }, "\u8BAD\u7EC3\u5DF2\u5B8C\u6210 \xB7 OVR ", player.overall), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: "#888", marginTop: 6 } }, "\u8FD4\u56DE\u8D5B\u7A0B\u9875\u5F00\u59CB\u65B0\u8D5B\u5B63")), /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setRetireModal(true), style: { width: "100%", padding: "12px 0", background: "#2a0d0d", border: "1px solid #ff444444", borderRadius: 10, color: "#ff8888", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "sans-serif" } }, "\u{1F3C1} \u5BA3\u5E03\u9000\u5F79")) : /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#1a1a0d", borderRadius: 12, padding: 20, textAlign: "center", border: "1px solid #f9a01b44" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, color: "#f9a01b" } }, "\u23F3 \u4F11\u8D5B\u671F\u8BAD\u7EC3\u5728\u8D5B\u5B63\u7ED3\u675F\u540E\u5F00\u653E"))), view === "relations" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 14 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 2, marginBottom: 12 } }, "\u7BA1\u7406\u5C42\u5173\u7CFB"), PERSON_TYPES.map((pt) => {
       const val = relationships[pt.key];
       const q = val >= 70 ? "\u878D\u6D3D" : val >= 45 ? "\u4E00\u822C" : "\u7D27\u5F20";
       const col = val >= 70 ? "#00ff88" : val >= 45 ? "#f9a01b" : "#ff5555";
@@ -1605,7 +1698,25 @@
           return [...prev, c];
         });
       }, style: { padding: "5px 12px", background: affordable ? "#1a2a1a" : "#111", border: "1px solid " + (affordable ? "#00ff8844" : "#ffffff05"), borderRadius: 8, color: affordable ? "#00ff88" : "#333", fontSize: 11, cursor: affordable ? "pointer" : "not-allowed", fontFamily: "sans-serif" } }, affordable ? "\u8D2D\u4E70" : "\u8D44\u91D1\u4E0D\u8DB3"));
-    }))), dayModal && /* @__PURE__ */ react_shim_default.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200 }, onClick: () => setDayModal(null) }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: "18px 18px 0 0", padding: 24, width: "100%", maxWidth: 460 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, fontWeight: 700, marginBottom: 6 } }, calMonth + 1 + "\u6708" + dayModal.day + "\u65E5"), dayModal.game ? /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 14 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: ac, marginBottom: 4 } }, dayModal.game.home ? "\u4E3B\u573A" : "\u5BA2\u573A", " vs ", dayModal.game.opp), dayModal.game.status !== "upcoming" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: dayModal.game.status === "won" ? "#00ff88" : "#ff5555" } }, dayModal.game.status === "won" ? "\u2705 \u80DC" : "\u274C \u8D1F", dayModal.game.stats && !dayModal.game.stats.rested ? " \xB7 " + dayModal.game.stats.pts + "\u5206 " + dayModal.game.stats.ast + "\u52A9 " + dayModal.game.stats.reb + "\u7BEE" : "  \u4F11\u6218")) : /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: "#555", marginBottom: 14 } }, "\u672C\u65E5\u65E0\u6BD4\u8D5B"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, dayModal.game && dayModal.game.status === "upcoming" && /* @__PURE__ */ react_shim_default.createElement(
+    }))), retireModal && /* @__PURE__ */ react_shim_default.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 16, padding: 24, width: "100%", maxWidth: 380, border: "1px solid #ff444444" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 36, textAlign: "center", marginBottom: 12 } }, "\u{1F3C1}"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 17, fontWeight: 800, marginBottom: 8, textAlign: "center" } }, "\u5BA3\u5E03\u9000\u5F79\uFF1F"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: "#aaa", lineHeight: 1.7, marginBottom: 20 } }, player.name, " \xB7 ", player.age, " \u5C81 \xB7 \u5171 ", season, " \u4E2A\u8D5B\u5B63", /* @__PURE__ */ react_shim_default.createElement("br", null), "\u751F\u6DAF OVR: ", player.overall, /* @__PURE__ */ react_shim_default.createElement("br", null), seasonAwards && (seasonAwards.iChampion ? "\u2728 \u81F3\u5C11 1 \u6B21\u603B\u51A0\u519B" : ""), /* @__PURE__ */ react_shim_default.createElement("br", null), /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#ff8888" } }, "\u9000\u5F79\u540E\u5C06\u65E0\u6CD5\u7EE7\u7EED\u8FD9\u4E2A\u5B58\u6863\u3002\u5EFA\u8BAE\u5148 \u2B07\u5907\u4EFD\u3002")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ react_shim_default.createElement(
+      "button",
+      {
+        onClick: () => {
+          setRetired(true);
+          setRetireModal(false);
+          doSave();
+        },
+        style: { flex: 1, padding: "12px 0", background: "#ff4444", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "sans-serif" }
+      },
+      "\u786E\u8BA4\u9000\u5F79"
+    ), /* @__PURE__ */ react_shim_default.createElement(
+      "button",
+      {
+        onClick: () => setRetireModal(false),
+        style: { flex: 1, padding: "12px 0", background: "#222", border: "none", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer", fontFamily: "sans-serif" }
+      },
+      "\u518D\u60F3\u60F3"
+    )))), dayModal && /* @__PURE__ */ react_shim_default.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200 }, onClick: () => setDayModal(null) }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: "18px 18px 0 0", padding: 24, width: "100%", maxWidth: 460 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, fontWeight: 700, marginBottom: 6 } }, calMonth + 1 + "\u6708" + dayModal.day + "\u65E5"), dayModal.game ? /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 14 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: ac, marginBottom: 4 } }, dayModal.game.home ? "\u4E3B\u573A" : "\u5BA2\u573A", " vs ", dayModal.game.opp), dayModal.game.status !== "upcoming" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: dayModal.game.status === "won" ? "#00ff88" : "#ff5555" } }, dayModal.game.status === "won" ? "\u2705 \u80DC" : "\u274C \u8D1F", dayModal.game.stats && !dayModal.game.stats.rested ? " \xB7 " + dayModal.game.stats.pts + "\u5206 " + dayModal.game.stats.ast + "\u52A9 " + dayModal.game.stats.reb + "\u7BEE" : "  \u4F11\u6218")) : /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: "#555", marginBottom: 14 } }, "\u672C\u65E5\u65E0\u6BD4\u8D5B"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, dayModal.game && dayModal.game.status === "upcoming" && /* @__PURE__ */ react_shim_default.createElement(
       "button",
       {
         onClick: async () => {
