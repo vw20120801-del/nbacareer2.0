@@ -105,6 +105,65 @@ const RENT_OPTIONS = [
   {id:"luxury_apt",name:"豪华公寓",monthly:0.015,icon:"🏢",desc:"市中心景观"},
 ];
 
+// ── Salary Cap & Negotiation (D-batch-2) ─────────────────────────────────────
+// 2024-25 NBA real cap is ~$140M. We use $140M as the league cap.
+// Max contract:
+//   0-6 years experience: 25% of cap = $35M
+//   7-9 years:             30% of cap = $42M
+//   10+ years:             35% of cap = $49M
+const SALARY_CAP = 140;
+function getMaxSalary(season: number): number {
+  if(season >= 10) return Math.round(SALARY_CAP * 0.35);
+  if(season >= 7) return Math.round(SALARY_CAP * 0.30);
+  return Math.round(SALARY_CAP * 0.25);
+}
+// Reject lines used during negotiation
+const NEGOTIATE_REJECT = [
+  "球队管理层摇头：「这超出了我们的预算」。",
+  "GM 直接拒绝：「我们没有那么多薪资空间」。",
+  "老板冷冷地说：「这个数字不可能」。",
+  "球队顾问皱起眉头：「我们需要重新考虑」。",
+  "对方报价员沉默良久：「请你再考虑一下我们原本的报价」。",
+  "GM 拒绝后撂下一句：「我们会去看别的选项」。",
+];
+const NEGOTIATE_ACCEPT = [
+  "球队管理层经过短暂讨论后点头同意。",
+  "GM 笑着说：「成交，期待你为我们效力」。",
+  "老板亲自打来电话表达了欢迎。",
+  "经纪人确认：合同条款已敲定。",
+];
+function negotiate(currentSalary: number, increase: number, isHome: boolean, ovr: number, maxAllowed: number): { accepted: boolean; line: string; newSalary: number } {
+  const newSalary = +(currentSalary + increase).toFixed(1);
+  if(newSalary > maxAllowed) {
+    return { accepted: false, line: "超过顶薪上限 $"+maxAllowed+"M，球队无法接受。", newSalary: currentSalary };
+  }
+  const pct = increase / Math.max(1, currentSalary);
+  let acceptP = 0.95;
+  if(pct < 0.1) acceptP = 0.92;
+  else if(pct < 0.2) acceptP = 0.65;
+  else if(pct < 0.3) acceptP = 0.32;
+  else acceptP = 0.08;
+  if(isHome) acceptP += 0.1;
+  acceptP += (ovr - 80) / 220;
+  acceptP = Math.max(0.05, Math.min(0.97, acceptP));
+  const accepted = Math.random() < acceptP;
+  return {
+    accepted,
+    line: accepted ? NEGOTIATE_ACCEPT[Math.floor(Math.random()*NEGOTIATE_ACCEPT.length)] : NEGOTIATE_REJECT[Math.floor(Math.random()*NEGOTIATE_REJECT.length)],
+    newSalary: accepted ? newSalary : currentSalary,
+  };
+}
+
+// ── Trade Pool (D-batch-2) ───────────────────────────────────────────────────
+// When player gets traded (active or passive), pick a destination team and
+// reset relationships to mid-low values + regenerate teammates.
+function pickTradeDestination(currentTeamAbbr: string, ovr: number): any {
+  // Stronger players go to better teams (higher color seed = better)
+  const candidates = ALL_TEAMS.filter(t => t.abbr !== currentTeamAbbr);
+  // For now: random — could later weight by team strength
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function loadSaves() { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : {}; } catch(e) { return {}; } }
 function writeSaves(s) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch(e) {} }
@@ -1128,6 +1187,7 @@ function MainScreen({saveId, init, onQuit}) {
   const [restModal, setRestModal] = useState(false);
   const [retireModal, setRetireModal] = useState(false);
   const [retired, setRetired] = useState(false);
+  const [negotiateResult, setNegotiateResult] = useState<any>(null); // D7
   const [restInput, setRestInput] = useState(1);
 
   const played = regularGames.filter(g=>g.status!=="upcoming");
@@ -1431,6 +1491,34 @@ function MainScreen({saveId, init, onQuit}) {
     }
     setResting(0); // clear any rest counter
 
+    // D9: passive trade check — team may trade the player if relations are bad
+    //     or after a major injury, unless teammates / coach love them.
+    let curTeam = team;
+    let curRels = relationships;
+    let curTeammates = teammates;
+    const recentBigInjury = injury && (injury.severity === "重伤" || injury.severity === "赛季报销");
+    const relsBad = curRels.gm < 25 || curRels.owner < 25;
+    const teammatesLove = curRels.teammate > 80 || curRels.coach > 80;
+    let passiveTradeChance = 0;
+    if(relsBad) passiveTradeChance += 0.5;
+    if(recentBigInjury) passiveTradeChance += 0.3;
+    if(teammatesLove) passiveTradeChance *= 0.3; // teammates protect you
+    if(contract.year > contract.totalYears) passiveTradeChance = 0; // FA — handled elsewhere
+    if(passiveTradeChance > 0 && Math.random() < passiveTradeChance) {
+      const newTeam = pickTradeDestination(team.abbr, player.overall);
+      curTeam = newTeam;
+      curTeammates = generateTeammates();
+      curRels = {coach:55, gm:50, owner:50, star:45, teammate:60};
+      setTeam(newTeam);
+      setTeammates(curTeammates);
+      setRelationships(curRels);
+      setInjuryLog(prev => [...prev, {name:"被交易至 "+newTeam.abbr, date: new Date().toISOString(), type:"trade"}]);
+      // Show a one-time notification via narrative
+      setNarrative("📰 重磅交易！你被 "+team.city+team.name+" 送到了 "+newTeam.city+newTeam.name+"。" +
+        (relsBad ? "管理层关系恶化已久。" : "") +
+        (recentBigInjury ? "球队不愿承担你的伤病恢复成本。" : ""));
+    }
+
     // D3: age++ and apply potential decay after 32
     const newAge = (player.age || 19) + 1;
     let decayedCeiling = {...player.ceiling};
@@ -1478,8 +1566,10 @@ function MainScreen({saveId, init, onQuit}) {
         const interestBase = Math.max(0.2, (myOvr - 75) / 25); // 0-1 scale
         const interest = isHome ? Math.min(1, interestBase + 0.2) : interestBase * (0.5 + Math.random()*0.6);
         if(interest < 0.25 && !isHome) return null; // low interest teams don't offer
+        // D7: FA salaries respect the cap
+        const maxAllowed = getMaxSalary(ns);
         const baseSalary = Math.max(3, Math.round((myOvr - 60) * 0.9 + ns * 0.5));
-        const salary = Math.round((baseSalary * (0.7 + interest * 0.6)) * 10) / 10;
+        const salary = Math.min(maxAllowed, Math.round((baseSalary * (0.7 + interest * 0.6)) * 10) / 10);
         const years = Math.floor(Math.random()*3) + (isHome ? 2 : 1);
         return {salary, years, source:t.city+" "+t.name, rivalAbbr:t.abbr, isFA:true, interest:+interest.toFixed(2), isHome};
       }).filter(Boolean).sort((a,b)=>b.salary-a.salary);
@@ -1533,10 +1623,29 @@ function MainScreen({saveId, init, onQuit}) {
 
   async function doRequestTrade() {
     setTradeLoading(true);
-    const tgt = ALL_TEAMS.find(t=>t.abbr!==team.abbr)||ALL_TEAMS[0];
+    // D8: actually perform a trade with some probability.
+    //     30% accepted → team change. 50% rejected → relations -10/-8.
+    //     20% rejected + reputation damage → relations -15/-12.
+    const roll = Math.random();
+    const tgt = pickTradeDestination(team.abbr, player.overall);
     const txt = await aiCall("NBA剧情叙述者。中文3句话："+player.name+"向"+team.city+team.name+"申请交易，可能去"+tgt.city+tgt.name+"。戏剧性强。只输出叙述。");
-    setTradeResult(txt||"交易申请已提交，管理层正在考虑。");
-    setRelationships(prev=>({...prev,gm:Math.max(0,prev.gm-10),owner:Math.max(0,prev.owner-8)}));
+
+    if(roll < 0.30) {
+      // Accepted
+      setTradeResult("✓ 交易成功！你被交易到了 "+tgt.city+tgt.name+"。\n\n"+(txt||""));
+      setTeam(tgt);
+      setTeammates(generateTeammates());
+      setRelationships({coach:55, gm:50, owner:50, star:45, teammate:60}); // fresh start
+      setInjuryLog(prev => [...prev, {name:"交易至 "+tgt.abbr, date:new Date().toISOString(), type:"trade"}]);
+    } else if(roll < 0.80) {
+      // Rejected, mild damage
+      setTradeResult("✗ 交易申请被拒绝。\n\n"+(txt||""));
+      setRelationships((prev: any) => ({...prev, gm: Math.max(0, prev.gm-10), owner: Math.max(0, prev.owner-8)}));
+    } else {
+      // Rejected, reputation hit
+      setTradeResult("✗ 交易申请泄露，更衣室震荡。\n\n"+(txt||""));
+      setRelationships((prev: any) => ({...prev, gm: Math.max(0, prev.gm-15), owner: Math.max(0, prev.owner-12), teammate: Math.max(0, prev.teammate-8)}));
+    }
     setTradeLoading(false);
   }
 
@@ -2308,17 +2417,39 @@ function MainScreen({saveId, init, onQuit}) {
                   const newTeam = ALL_TEAMS.find(t=>t.abbr===newTeamAbbr);
                   if(newTeam) { setTeam(newTeam); setTeammates(generateTeammates()); setRelationships({coach:60,gm:55,owner:50,star:45,teammate:65}); }
                 }
-                setContractModal(false); setContractOffer(null); setFreeAgent(false); setFaOffers([]);
+                setContractModal(false); setContractOffer(null); setFreeAgent(false); setFaOffers([]); setNegotiateResult(null);
               }} style={{flex:2,padding:"12px 0",background:"linear-gradient(135deg,#00ff88,#00cc66)",border:"none",borderRadius:10,color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"sans-serif"}}>
                 ✓ 接受
               </button>
-              <button onClick={()=>setContractOffer(prev=>({...prev,salary:+(prev.salary+Math.floor(Math.random()*3)+1).toFixed(1)}))}
+              <button onClick={()=>{
+                // D7: real negotiation — outcome depends on increase %, OVR, isHome.
+                const increase = +(Math.floor(Math.random()*3)+1).toFixed(1);
+                const maxAllowed = getMaxSalary(season);
+                const r = negotiate(contractOffer.salary, increase, !!contractOffer.isHome, player.overall, maxAllowed);
+                setNegotiateResult(r);
+                if(r.accepted) {
+                  setContractOffer((prev: any) => ({...prev, salary: r.newSalary}));
+                } else {
+                  // Failed negotiations slightly damage relations with offering team
+                  if(contractOffer.isHome) {
+                    setRelationships((prev: any) => ({...prev, gm: Math.max(0, prev.gm - 2), owner: Math.max(0, prev.owner - 2)}));
+                  }
+                }
+              }}
                 style={{flex:1,padding:"12px 0",background:"#1a2a1a",border:"1px solid #00ff8844",borderRadius:10,color:"#00ff88",fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>
                 📈 要价
               </button>
             </div>
 
             {/* All FA offers list */}
+            {/* D7: negotiation result feedback */}
+            {negotiateResult && (
+              <div style={{background: negotiateResult.accepted?"#0d2a1a":"#2a0d0d", borderLeft:"3px solid "+(negotiateResult.accepted?"#00ff88":"#ff5555"), borderRadius:8, padding:"9px 12px", marginBottom:12, fontSize:12, color: negotiateResult.accepted?"#88ffbb":"#ffaaaa", display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+                <span>{negotiateResult.accepted?"✓ ":"✗ "}{negotiateResult.line}</span>
+                <button onClick={()=>setNegotiateResult(null)} style={{background:"transparent",border:"none",color:"inherit",cursor:"pointer",fontSize:14,opacity:0.6,padding:0}}>×</button>
+              </div>
+            )}
+            <div style={{fontSize:11,color:"#666",marginBottom:10}}>顶薪上限 ${getMaxSalary(season)}M · 联盟薪资帽 ${SALARY_CAP}M</div>
             {faOffers.length>0 && (
               <div>
                 <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:8}}>全联盟报价 ({faOffers.length}支球队)</div>
