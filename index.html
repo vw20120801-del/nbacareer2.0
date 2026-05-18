@@ -2062,6 +2062,7 @@ function App() {
   <!-- Save export/import widget (independent of React; talks to localStorage directly) -->
   <div id="save-tools">
     <a href="./guide.html" target="_blank" rel="noopener" title="打开新手指南（新标签）">📖 指南</a>
+    <button type="button" onclick="window.__nbaDownloadLocal()" title="下载离线版到本地（双击即可离线玩）">💾 本地玩</button>
     <button type="button" onclick="window.__nbaExportSave()" title="导出全部存档为 JSON">⬇ 备份</button>
     <button type="button" onclick="document.getElementById('__nbaImportFile').click()" title="从 JSON 文件恢复存档">⬆ 恢复</button>
     <input type="file" id="__nbaImportFile" accept="application/json,.json" hidden onchange="window.__nbaImportSave(this.files[0]); this.value=''">
@@ -2102,6 +2103,20 @@ function App() {
           }
         };
         r.readAsText(file);
+      };
+      window.__nbaDownloadLocal = function () {
+        fetch("./nbacareer-local.html", { cache: "no-cache" })
+          .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.blob(); })
+          .then(function (blob) {
+            var a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "nbacareer-local.html";
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(function () {
+              alert("✓ 下载完成！\n\n离线玩法：\n1. 找到下载的 nbacareer-local.html\n2. 双击用浏览器打开\n3. 加入收藏夹/拖到桌面，下次一键打开\n\niPhone：用「文件」App 找到它 → 分享 → 用 Safari 打开");
+            }, 600);
+          })
+          .catch(function (e) { alert("下载失败：" + e.message); });
       };
     })();
   </script>
