@@ -7,5 +7,7 @@ export const useMemo = R.useMemo;
 export const useEffect = R.useEffect;
 export const useCallback = R.useCallback;
 export const useRef = R.useRef;
+export const useContext = R.useContext;
+export const createContext = R.createContext;
 export const Fragment = R.Fragment;
 export const createElement = R.createElement;
