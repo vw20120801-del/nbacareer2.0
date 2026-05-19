@@ -1410,12 +1410,12 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
         curInj = {...curInj, daysLeft: (curInj.daysLeft || 0) - elapsedDays};
         if(curInj.daysLeft <= 0) {
           newInjLog.push({name:curInj.name,date:g.date,type:"recovered"});
-          injEvent = t("sim.recovered_from", lang, {name: tx(curInj.name, lang)});
+          injEvent = "🟢 已从「"+curInj.name+"」中恢复！";
           curInj = null;
         }
       } else {
         const ni = checkNewInjury();
-        if(ni) { curInj=ni; newInjLog.push({name:ni.name,date:g.date,days:ni.daysLeft,type:"injured"}); injEvent=t("sim.injured", lang, {name: tx(ni.name, lang), n: ni.daysLeft}); }
+        if(ni) { curInj=ni; newInjLog.push({name:ni.name,date:g.date,days:ni.daysLeft,type:"injured"}); injEvent="🔴 受伤！"+ni.name+"，预计缺席 "+ni.daysLeft+" 天"; }
       }
       const res = simOneGame(curInj, isResting);
       newReg = newReg.map(s=>s.id===g.id?{...s,status:res.win?"won":"lost",stats:res}:s);
@@ -1445,7 +1445,7 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
         const txt = await aiCall("你是NBA解说员。中文3句话："+player.name+"（"+team.city+team.name+"，"+player.position+"，"+player.archetype+"）对阵"+oppT.city+oppT.name+"。"+lastG.stats.pts+"分 "+lastG.stats.ast+"助 "+lastG.stats.reb+"篮，"+(lastG.status==="won"?"胜":"负", lang)+"。"+(lastG.stats.injured?"带伤出战。":"")+"体现"+player.archetype+"风格。只输出解说词。", lang);
         setNarrative((injEvent?injEvent+"\n\n":"")+(txt||"精彩比赛！"));
       } else {
-        setNarrative((injEvent||"")+(injEvent?"\n\n":"")+(games.length>1?t("sim.completed_n_games", lang, {n: games.length}):t("sim.rested_this_game", lang)));
+        setNarrative((injEvent||"")+(injEvent?"\n\n":"")+(games.length>1?"已完成 "+games.length+" 场模拟。":"本场球员休战。"));
       }
     }
     setSimming(false);
@@ -1469,8 +1469,8 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
           const isMyMatch = s.teamA.abbr===team.abbr||s.teamB.abbr===team.abbr;
           const imTeamA = s.teamA.abbr===team.abbr;
           let curInj = injury; let newInjLog=[...injuryLog]; let injEvent=null;
-          if(curInj){curInj={...curInj,daysLeft:(curInj.daysLeft||0)-2};if(curInj.daysLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent=t("sim.recovered_short", lang);curInj=null;}}
-          else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,days:ni.daysLeft,type:"injured"});injEvent=t("sim.injured_short", lang, {name: tx(ni.name, lang)});}}
+          if(curInj){curInj={...curInj,daysLeft:(curInj.daysLeft||0)-2};if(curInj.daysLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent="🟢 已恢复！";curInj=null;}}
+          else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,days:ni.daysLeft,type:"injured"});injEvent="🔴 受伤！"+ni.name;}}
           const res = isMyMatch ? simOneGame(curInj,false) : {pts:0,ast:0,reb:0,stl:0,blk:0,win:Math.random()>0.45,injured:false,rested:false};
           const aWon = imTeamA ? res.win : !res.win;
           if(aWon) s.winsA++; else s.winsB++;
@@ -1490,8 +1490,8 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
         const isMyMatch = s.teamA.abbr===team.abbr||s.teamB.abbr===team.abbr;
         const imTeamA = s.teamA.abbr===team.abbr;
         let curInj=injury; let newInjLog=[...injuryLog]; let injEvent=null;
-        if(curInj){curInj={...curInj,daysLeft:(curInj.daysLeft||0)-2};if(curInj.daysLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent=t("sim.recovered_short", lang);curInj=null;}}
-        else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,days:ni.daysLeft,type:"injured"});injEvent=t("sim.injured_short", lang, {name: tx(ni.name, lang)});}}
+        if(curInj){curInj={...curInj,daysLeft:(curInj.daysLeft||0)-2};if(curInj.daysLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent="🟢 已恢复！";curInj=null;}}
+        else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,days:ni.daysLeft,type:"injured"});injEvent="🔴 受伤！"+ni.name;}}
         const res = isMyMatch ? simOneGame(curInj,false) : {pts:0,ast:0,reb:0,stl:0,blk:0,win:Math.random()>0.45,injured:false,rested:false};
         const aWon = imTeamA ? res.win : !res.win;
         if(aWon) s.winsA++; else s.winsB++;
@@ -2030,7 +2030,7 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
           )}
           {injury && (
             <div style={{background:"#2a0d0d",borderRadius:10,padding:"9px 14px",marginBottom:10,border:"1px solid #ff444444"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#ff6b6b"}}>🤕 {injury.name} · 还需 {injury.daysLeft||0} 天</div>
+              <div style={{fontSize:12,fontWeight:700,color:"#ff6b6b"}}>{t("cal.injury_banner", lang, {name: tx(injury.name, lang), n: injury.daysLeft||0})}</div>
             </div>
           )}
 
@@ -2074,13 +2074,13 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
               {calGames.filter(g=>g.status==="upcoming").length>0 && (
                 <button onClick={async()=>{const l=calGames.filter(g=>g.status==="upcoming").slice(-1)[0];if(l)await simulateUpTo(l.id);}} disabled={simming}
                   style={{flex:1,padding:"11px 0",fontSize:12,fontWeight:700,background:simming?"#222":team.color,border:"2px solid "+(simming?"#333":ac),color:simming?"#444":ac,borderRadius:9,cursor:simming?"not-allowed":"pointer",fontFamily:"sans-serif"}}>
-                  {simming?t("cal.simming", lang):t("cal.sim_month", lang)}
+                  {simming?"模拟中...":"▶▶ 本月"}
                 </button>
               )}
               {regularGames.filter(g=>g.status==="upcoming").length>0 && (
                 <button onClick={async()=>{const l=regularGames.filter(g=>g.status==="upcoming").slice(-1)[0];if(l)await simulateUpTo(l.id);}} disabled={simming}
                   style={{flex:1,padding:"11px 0",fontSize:12,fontWeight:700,background:"transparent",border:"1px solid #ffffff22",color:"#666",borderRadius:9,cursor:simming?"not-allowed":"pointer",fontFamily:"sans-serif"}}>
-                  {t("cal.sim_rest", lang)}
+                  ⏩ 剩余常规赛
                 </button>
               )}
             </div>
