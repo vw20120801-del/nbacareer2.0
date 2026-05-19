@@ -1346,6 +1346,10 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
 
   // B15: debounce auto-save — was triggering on every game update.
   const _saveTimerRef = useRef<any>(null);
+  // Mirror playoffBracket to a ref so async loops can read the latest value
+  // without being trapped in a stale closure.
+  const playoffBracketRef = useRef<any>(null);
+  useEffect(() => { playoffBracketRef.current = playoffBracket; }, [playoffBracket]);
   useEffect(() => {
     if(played.length === 0) return;
     if(_saveTimerRef.current) clearTimeout(_saveTimerRef.current);
@@ -1445,7 +1449,7 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
       setNarrativeCtx(lastG);
       if(games.length===1 && !lastG.stats?.rested) {
         const oppT = ALL_TEAMS.find(t=>t.abbr===lastG.opp)||ALL_TEAMS[0];
-        const txt = await aiCall("你是NBA解说员。中文3句话："+player.name+"（"+team.city+team.name+"，"+player.position+"，"+player.archetype+"）对阵"+oppT.city+oppT.name+"。"+lastG.stats.pts+"分 "+lastG.stats.ast+"助 "+lastG.stats.reb+"篮，"+(lastG.status==="won"?"胜":"负", lang)+"。"+(lastG.stats.injured?"带伤出战。":"")+"体现"+player.archetype+"风格。只输出解说词。", lang);
+        const txt = await aiCall("你是NBA解说员。中文3句话："+player.name+"（"+team.city+team.name+"，"+player.position+"，"+player.archetype+"）对阵"+oppT.city+oppT.name+"。"+lastG.stats.pts+"分 "+lastG.stats.ast+"助 "+lastG.stats.reb+"篮，"+(lastG.status==="won"?"胜":"负")+"。"+(lastG.stats.injured?"带伤出战。":"")+"体现"+player.archetype+"风格。只输出解说词。", lang);
         setNarrative((injEvent?injEvent+"\n\n":"")+(txt||"精彩比赛！"));
       } else {
         setNarrative((injEvent||"")+(injEvent?"\n\n":"")+(games.length>1?"已完成 "+games.length+" 场模拟。":"本场球员休战。"));
@@ -1455,9 +1459,13 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
   }
 
   async function simPlayoffGame(series) {
-    if(simming||!playoffBracket) return;
+    // Read the LATEST bracket from the ref (avoids stale closure when called
+    // in a loop from autoSimAllPlayoffs).
+    const pb = playoffBracketRef.current || playoffBracket;
+    if(!pb) return;
     setSimming(true); setNarrative(""); setNarrativeCtx(null);
-    const nb = JSON.parse(JSON.stringify(playoffBracket));
+    try {
+    const nb = JSON.parse(JSON.stringify(pb));
 
     // Find which conf and round this series belongs to
     function findAndSim(confObj) {
@@ -1550,14 +1558,16 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
     autoAdvance(nb.west,"West");
     autoAdvance(nb.east,"East");
     setPlayoffBracket(nb);
+    playoffBracketRef.current = nb;  // sync ref so loop sees progress
 
     if(result&&result.isMyMatch) {
       const oppT = ALL_TEAMS.find(t=>t.abbr===result.nextG.opp)||ALL_TEAMS[0];
       const myWin = result.imTeamA?(result.s.games.find(g=>g.id===result.nextG.id)?.status==="won"):!(result.s.games.find(g=>g.id===result.nextG.id)?.status==="won");
-      const txt = await aiCall("NBA季后赛解说员。中文3句话："+player.name+"（"+team.city+team.name+"）季后赛"+result.s.round+"对阵"+oppT.city+oppT.name+"。"+result.res.pts+"分 "+result.res.ast+"助 "+result.res.reb+"篮，"+(myWin?"胜":"负", lang)+"，系列赛"+(result.imTeamA?result.s.winsA:result.s.winsB)+"-"+(result.imTeamA?result.s.winsB:result.s.winsA)+"。只输出解说词。", lang);
+      const txt = await aiCall("NBA季后赛解说员。中文3句话："+player.name+"（"+team.city+team.name+"）季后赛"+result.s.round+"对阵"+oppT.city+oppT.name+"。"+result.res.pts+"分 "+result.res.ast+"助 "+result.res.reb+"篮，"+(myWin?"胜":"负")+"，系列赛"+(result.imTeamA?result.s.winsA:result.s.winsB)+"-"+(result.imTeamA?result.s.winsB:result.s.winsA)+"。只输出解说词。", lang);
       setNarrative((result.injEvent?result.injEvent+"\n\n":"")+(txt||"季后赛激战！"));
     }
-    setSimming(false);
+    } catch(e) { console.error("simPlayoffGame error:", e); }
+    finally { setSimming(false); }
   }
 
 
@@ -1574,21 +1584,22 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
     setOffseasonDone(true);
     setTrainAlloc({speed:0,shooting:0,passing:0,defense:0,strength:0,iq:0});
   }
-  // D6: keep simulating playoff games (any series) until a champion exists or no progress.
+  // D6: keep simulating until champion exists. Uses playoffBracketRef so
+  // each iteration reads the LATEST state (avoids stale-closure trap).
   async function autoSimAllPlayoffs() {
-    if(!playoffBracket || playoffBracket.champion) return;
-    // Loop with a hard ceiling to avoid infinite loops.
+    const initial = playoffBracketRef.current || playoffBracket;
+    if(!initial || initial.champion) return;
     for(let safety = 0; safety < 200; safety++) {
-      // Find next unfinished series
+      const pb = playoffBracketRef.current;
+      if(!pb || pb.champion) break;
       const allSeries: any[] = [];
-      if(playoffBracket.west) ["r1","r2","r3"].forEach(k => (playoffBracket.west[k]||[]).forEach((s:any)=>allSeries.push(s)));
-      if(playoffBracket.east) ["r1","r2","r3"].forEach(k => (playoffBracket.east[k]||[]).forEach((s:any)=>allSeries.push(s)));
-      if(playoffBracket.finals) allSeries.push(playoffBracket.finals);
+      if(pb.west) ["r1","r2","r3"].forEach(k => (pb.west[k]||[]).forEach((s:any)=>allSeries.push(s)));
+      if(pb.east) ["r1","r2","r3"].forEach(k => (pb.east[k]||[]).forEach((s:any)=>allSeries.push(s)));
+      if(pb.finals) allSeries.push(pb.finals);
       const next = allSeries.find(s => !s.winner);
       if(!next) break;
       await simPlayoffGame(next);
-      // Brief delay so React commits before next iteration
-      await new Promise(r => setTimeout(r, 30));
+      await new Promise(r => setTimeout(r, 50));
     }
   }
 
