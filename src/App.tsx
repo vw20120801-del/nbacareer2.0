@@ -166,7 +166,20 @@ function pickTradeDestination(currentTeamAbbr: string, ovr: number): any {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function loadSaves() { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : {}; } catch(e) { return {}; } }
-function writeSaves(s) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch(e) {} }
+function writeSaves(s: any): boolean {
+  // D10: quota exceeded → warn user once, return false so caller knows it failed.
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    return true;
+  } catch(e: any) {
+    const isQuota = e && (e.name === "QuotaExceededError" || (e.code === 22));
+    if(isQuota && !(window as any).__nbaQuotaWarned) {
+      (window as any).__nbaQuotaWarned = true;
+      alert("⚠️ 存档空间不足！\n\n用右下角的 ⬇备份 按钮导出现有存档到本地文件，\n然后删掉几个旧存档释放空间，再继续游戏。");
+    }
+    return false;
+  }
+}
 function calcOverall(stats) { return Math.round(Object.values(stats).reduce((a,b)=>a+b,0)/6); }
 
 // Generate simulated standings for all 30 teams (other teams get random records)
@@ -664,16 +677,35 @@ function CreateScreen({onDone, onBack}: any) {
   const [custom, setCustom] = useState(false);
   const [ctext, setCtext] = useState("");
   const [age, setAge] = useState(19); // D2: starting age, 18-26 slider
+  // D12: customizable physicals — user can tweak height/wingspan/weight, traits stay random
+  const [physicals, setPhysicals] = useState(() => generatePhysicals(pos));
+  // When position changes, reroll physicals to be in-range
+  useEffect(() => { setPhysicals(generatePhysicals(pos)); }, [pos]);
+  // Position-derived bounds for sliders
+  const heightRange = HEIGHTS_BY_POS[pos][0];
+  const weightRange = WEIGHTS_BY_POS[pos];
   const finalArc = custom ? ctext : arc;
+
+  function rerollPhysicals() { setPhysicals(generatePhysicals(pos)); }
+  function randomizeName() {
+    const pool = buildNamePool();
+    setName(pool[Math.floor(Math.random() * pool.length)]);
+  }
+  function setHeight(v: number) {
+    setPhysicals((p: any) => ({...p, heightCm: v, wingspanCm: v + p.wingDelta}));
+  }
+  function setWingDelta(d: number) {
+    setPhysicals((p: any) => ({...p, wingDelta: d, wingspanCm: p.heightCm + d}));
+  }
+  function setWeight(w: number) {
+    setPhysicals((p: any) => ({...p, weightKg: w}));
+  }
 
   function submit() {
     if(!name.trim() || !finalArc.trim()) return;
     const ceiling = generatePotential(pos, finalArc);
-    // D2: younger rookies get slightly lower initial stats (more room to grow);
-    // older rookies start higher but cap shrinks.
     const ageBoost = age >= 23 ? 0.05 : age <= 19 ? -0.03 : 0;
     const stats = generateInitialStats(pos, ceiling, ageBoost);
-    const physicals = generatePhysicals(pos);
     onDone({name:name.trim(), position:pos, archetype:finalArc.trim(), stats, ceiling, overall:calcOverall(stats), physicals, age});
   }
 
@@ -688,8 +720,12 @@ function CreateScreen({onDone, onBack}: any) {
       </div>
       <div style={{padding:20,maxWidth:440,margin:"0 auto"}}>
         <div style={{marginBottom:18}}>
-          <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2,marginBottom:8}}>球员姓名</div>
-          <input value={name} onChange={e=>setName(e.target.value)} placeholder="输入你的名字..."
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2}}>球员姓名</div>
+            <button type="button" onClick={randomizeName}
+              style={{fontSize:11,color:"#88aaff",background:"transparent",border:"1px solid #88aaff44",borderRadius:6,padding:"3px 10px",cursor:"pointer",fontFamily:"sans-serif"}}>🎲 随机</button>
+          </div>
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="输入你的名字或点击随机..."
             style={{width:"100%",padding:"14px 16px",background:"#111827",border:"1px solid #ffffff22",borderRadius:10,color:"#fff",fontSize:16,boxSizing:"border-box",outline:"none",fontFamily:"sans-serif"}}/>
         </div>
         <div style={{marginBottom:18}}>
@@ -739,6 +775,57 @@ function CreateScreen({onDone, onBack}: any) {
           </div>
           <div style={{fontSize:10,color:"#666",marginTop:6,lineHeight:1.5}}>
             年龄越大初始属性越高，但生涯越短。32 岁后潜力开始衰退。
+          </div>
+        </div>
+        {/* D12: physicals editor — sliders for height / wingspan / weight */}
+        <div style={{marginBottom:18,background:"#0d1117",borderRadius:10,padding:14,border:"1px solid #ffffff11"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2}}>身体数据</div>
+            <button type="button" onClick={rerollPhysicals}
+              style={{fontSize:11,color:"#88aaff",background:"transparent",border:"1px solid #88aaff44",borderRadius:6,padding:"3px 10px",cursor:"pointer",fontFamily:"sans-serif"}}>🎲 随机重置</button>
+          </div>
+          {/* Height */}
+          <div style={{marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#aaa",marginBottom:4}}>
+              <span>身高</span><span style={{color:"#fff",fontWeight:700}}>{physicals.heightCm} cm</span>
+            </div>
+            <input type="range" min={heightRange[0]} max={heightRange[1]} value={physicals.heightCm}
+              onChange={e=>setHeight(parseInt(e.target.value))}
+              style={{width:"100%",accentColor:"#f9a01b"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#555"}}>
+              <span>{heightRange[0]}</span><span>{heightRange[1]}</span>
+            </div>
+          </div>
+          {/* Wingspan delta */}
+          <div style={{marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#aaa",marginBottom:4}}>
+              <span>臂展</span>
+              <span><span style={{color:"#fff",fontWeight:700}}>{physicals.wingspanCm} cm</span> <span style={{color:physicals.wingDelta>=6?"#00ff88":physicals.wingDelta<0?"#ff8888":"#666",fontSize:10}}>({physicals.wingDelta>0?"+":""}{physicals.wingDelta})</span></span>
+            </div>
+            <input type="range" min={-3} max={12} value={physicals.wingDelta}
+              onChange={e=>setWingDelta(parseInt(e.target.value))}
+              style={{width:"100%",accentColor:"#f9a01b"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#555"}}>
+              <span>-3</span><span>0</span><span>+12</span>
+            </div>
+          </div>
+          {/* Weight */}
+          <div style={{marginBottom:6}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#aaa",marginBottom:4}}>
+              <span>体重</span><span style={{color:"#fff",fontWeight:700}}>{physicals.weightKg} kg</span>
+            </div>
+            <input type="range" min={weightRange[0]} max={weightRange[1]} value={physicals.weightKg}
+              onChange={e=>setWeight(parseInt(e.target.value))}
+              style={{width:"100%",accentColor:"#f9a01b"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#555"}}>
+              <span>{weightRange[0]}</span><span>{weightRange[1]}</span>
+            </div>
+          </div>
+          {/* Traits readout */}
+          <div style={{fontSize:10,color:"#666",marginTop:8,lineHeight:1.6}}>
+            静态天赋：{physicals.staticTraits.join("、")}<br/>
+            动态天赋：{physicals.dynamicTraits.join("、")}
+            <span style={{color:"#444"}}> (天赋随机生成，可重置)</span>
           </div>
         </div>
         <div style={{background:"#0f1923",borderRadius:10,padding:14,marginBottom:20,border:"1px solid #f9a01b22"}}>
@@ -1194,17 +1281,6 @@ function MainScreen({saveId, init, onQuit}) {
   const wins = regularGames.filter(g=>g.status==="won").length;
   const seasonOver = regularGames.filter(g=>g.status==="upcoming").length===0;
   const totalAlloc = Object.values(trainAlloc).reduce((a:number, b:any) => a + (b as number), 0);
-  // D4: dynamic training-point budget based on previous-season performance + age
-  const maxTrainPoints = useMemo(() => {
-    let pts = 6;
-    if(avg.pts > 25 && avg.ast > 5 && wins > 50 && player.overall > 85) pts += 2; // MVP-tier
-    else if(avg.pts > 20 && wins > 41) pts += 1; // good season
-    const age = player.age || 19;
-    if(age < 25) pts += 1;
-    if(age > 30) pts -= 1;
-    if(age > 35) pts -= 1;
-    return Math.max(3, Math.min(9, pts));
-  }, [avg.pts, avg.ast, wins, player.overall, player.age]);
 
   const avg = useMemo(()=>{
     const pg = played.filter(g=>g.stats);
@@ -1213,6 +1289,18 @@ function MainScreen({saveId, init, onQuit}) {
     const n = pg.length;
     return {pts:+(s.pts/n).toFixed(1),ast:+(s.ast/n).toFixed(1),reb:+(s.reb/n).toFixed(1),stl:+(s.stl/n).toFixed(1),blk:+(s.blk/n).toFixed(1)};
   },[played]);
+
+  // D4: dynamic training-point budget — MUST come after `avg` is declared (TDZ fix).
+  const maxTrainPoints = useMemo(() => {
+    let pts = 6;
+    if(avg.pts > 25 && avg.ast > 5 && wins > 50 && player.overall > 85) pts += 2;
+    else if(avg.pts > 20 && wins > 41) pts += 1;
+    const age = player.age || 19;
+    if(age < 25) pts += 1;
+    if(age > 30) pts -= 1;
+    if(age > 35) pts -= 1;
+    return Math.max(3, Math.min(9, pts));
+  }, [avg.pts, avg.ast, wins, player.overall, player.age]);
 
   const doSave = useCallback(()=>{
     const saves = loadSaves();
@@ -1545,9 +1633,31 @@ function MainScreen({saveId, init, onQuit}) {
     setFreeAgent(false); setSeasonAwards(null); setShowAwards(false); setFaOffers([]);
     // Add salary to savings (after taxes ~40%)
     const annualSavings = contract.salary * 0.6;
-    // Deduct rent if renting
-    const rentCost = currentRental ? currentRental.monthly * 12 : 0;
-    setSavings(prev => Math.max(0, +(prev + annualSavings - rentCost).toFixed(2)));
+    // D11: rent — months were prepaid when player rented. Each season eats 12 months.
+    //     If months remaining < 12, charge another year (auto-renew). If player can't afford,
+    //     the rental terminates and they're "homeless" (currentRental cleared, no rent charge).
+    let nextRent = currentRental;
+    let extraRentCharge = 0;
+    if(currentRental) {
+      const newMonthsLeft = (currentRental.monthsLeft || 0) - 12;
+      if(newMonthsLeft <= 0) {
+        // Need to renew: pay another year up front
+        const annualCost = +(currentRental.monthly * 12).toFixed(2);
+        const willHaveAfterSalary = +(savings + annualSavings).toFixed(2);
+        if(willHaveAfterSalary >= annualCost) {
+          extraRentCharge = annualCost;
+          nextRent = {...currentRental, monthsLeft: 12};
+        } else {
+          // Can't afford renewal → terminate rental
+          nextRent = null;
+          extraRentCharge = 0;
+        }
+      } else {
+        nextRent = {...currentRental, monthsLeft: newMonthsLeft};
+      }
+    }
+    setCurrentRental(nextRent);
+    setSavings(prev => Math.max(0, +(prev + annualSavings - extraRentCharge).toFixed(2)));
     // Generate awards
     const finalsAvg = calcFinalsAvg(playoffBracket, team.abbr);
     const awards = generateSeasonAwards(player.name, team.abbr, team.name, avg, player.overall, wins, season, playoffBracket, finalsAvg);
@@ -2195,7 +2305,7 @@ function MainScreen({saveId, init, onQuit}) {
             <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:4}}>个人财产</div>
             <div style={{fontSize:38,fontWeight:900,color:"#ffd700"}}>${savings.toFixed(2)}M</div>
             <div style={{fontSize:12,color:"#555",marginTop:2}}>储蓄 · 税后收入每赛季自动入账</div>
-            {currentRental && <div style={{fontSize:11,color:"#f9a01b",marginTop:4}}>🏠 租房中：{currentRental.name} · ${(currentRental.monthly*12).toFixed(2)}M/年</div>}
+            {currentRental && <div style={{fontSize:11,color:"#f9a01b",marginTop:4}}>🏠 租房中：{currentRental.name} · ${(currentRental.monthly*12).toFixed(2)}M/年 · 剩余 {currentRental.monthsLeft||12} 个月</div>}
             {ownedHouse && <div style={{fontSize:11,color:"#00ff88",marginTop:4}}>🏡 已购房：{ownedHouse.name}（{ownedHouse.city}）</div>}
           </div>
 
@@ -2215,8 +2325,18 @@ function MainScreen({saveId, init, onQuit}) {
                         <div style={{fontSize:13,color:isRenting?"#00ff88":"#ccc"}}>{r.icon} {r.name}</div>
                         <div style={{fontSize:10,color:"#555"}}>{r.desc} · ${(r.monthly*12).toFixed(2)}M/年</div>
                       </div>
-                      <button onClick={()=>setCurrentRental(isRenting?null:r)} style={{padding:"5px 12px",background:isRenting?"#2a0d0d":"#1a2a1a",border:"1px solid "+(isRenting?"#ff444444":"#00ff8844"),borderRadius:8,color:isRenting?"#ff8888":"#00ff88",fontSize:11,cursor:"pointer",fontFamily:"sans-serif"}}>
-                        {isRenting?"退租":"租房"}
+                      <button onClick={()=>{
+                        if(isRenting) {
+                          setCurrentRental(null);
+                        } else {
+                          // D11: prepay 12 months upfront. Auto-renew at season end if affordable.
+                          const cost = +(r.monthly * 12).toFixed(2);
+                          if(savings < cost) { alert("资金不足，需要 $"+cost+"M 才能预付一年租金"); return; }
+                          setSavings((s: number) => +(s - cost).toFixed(2));
+                          setCurrentRental({...r, monthsLeft: 12, prepaid: cost});
+                        }
+                      }} style={{padding:"5px 12px",background:isRenting?"#2a0d0d":"#1a2a1a",border:"1px solid "+(isRenting?"#ff444444":"#00ff8844"),borderRadius:8,color:isRenting?"#ff8888":"#00ff88",fontSize:11,cursor:"pointer",fontFamily:"sans-serif"}}>
+                        {isRenting?"退租":"租房 (预付1年)"}
                       </button>
                     </div>
                   );
