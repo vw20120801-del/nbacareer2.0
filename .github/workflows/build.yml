@@ -1,0 +1,56 @@
+name: Compile src/App.tsx → index.html
+
+# Runs on every push that touches the source bundle. Reads src/App.tsx,
+# compiles via esbuild, replaces the Game-bundle <script> block inside
+# index.html, and commits the result back to main.
+#
+# Triggered by:
+#   - src/**          (anything in src directory)
+#   - scripts/**      (the build script itself)
+#   - .github/workflows/build.yml (this file)
+#
+# Won't loop: the auto-commit message ends with [skip ci] which GitHub
+# Actions automatically skips. Also we guard with `paths` so a commit
+# that only touches index.html won't re-trigger.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'scripts/build.mjs'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install esbuild
+        run: npm install --no-save esbuild@0.21.5
+
+      - name: Build
+        run: node scripts/build.mjs
+
+      - name: Commit & push if index.html changed
+        run: |
+          if [ -z "$(git status --porcelain index.html)" ]; then
+            echo "No changes to index.html — nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "build: auto-compile index.html [skip ci]"
+          git push
