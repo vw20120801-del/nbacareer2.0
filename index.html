@@ -2042,6 +2042,10 @@
       setTimeout(() => setSaveMsg(""), 2e3);
     }, [player, team, season, phase, regularGames, playoffBracket, playoffRound, injury, resting, injuryLog, relationships, contract, brands, offseasonDone, wins, played, saveId, contractOffer]);
     const _saveTimerRef = useRef(null);
+    const playoffBracketRef = useRef(null);
+    useEffect(() => {
+      playoffBracketRef.current = playoffBracket;
+    }, [playoffBracket]);
     useEffect(() => {
       if (played.length === 0) return;
       if (_saveTimerRef.current) clearTimeout(_saveTimerRef.current);
@@ -2157,7 +2161,7 @@
         setNarrativeCtx(lastG);
         if (games.length === 1 && !lastG.stats?.rested) {
           const oppT = ALL_TEAMS.find((t2) => t2.abbr === lastG.opp) || ALL_TEAMS[0];
-          const txt = await aiCall("\u4F60\u662FNBA\u89E3\u8BF4\u5458\u3002\u4E2D\u65873\u53E5\u8BDD\uFF1A" + player.name + "\uFF08" + team.city + team.name + "\uFF0C" + player.position + "\uFF0C" + player.archetype + "\uFF09\u5BF9\u9635" + oppT.city + oppT.name + "\u3002" + lastG.stats.pts + "\u5206 " + lastG.stats.ast + "\u52A9 " + lastG.stats.reb + "\u7BEE\uFF0C" + (lastG.status === "won" ? "\u80DC" : "\u8D1F", lang) + "\u3002" + (lastG.stats.injured ? "\u5E26\u4F24\u51FA\u6218\u3002" : "") + "\u4F53\u73B0" + player.archetype + "\u98CE\u683C\u3002\u53EA\u8F93\u51FA\u89E3\u8BF4\u8BCD\u3002", lang);
+          const txt = await aiCall("\u4F60\u662FNBA\u89E3\u8BF4\u5458\u3002\u4E2D\u65873\u53E5\u8BDD\uFF1A" + player.name + "\uFF08" + team.city + team.name + "\uFF0C" + player.position + "\uFF0C" + player.archetype + "\uFF09\u5BF9\u9635" + oppT.city + oppT.name + "\u3002" + lastG.stats.pts + "\u5206 " + lastG.stats.ast + "\u52A9 " + lastG.stats.reb + "\u7BEE\uFF0C" + (lastG.status === "won" ? "\u80DC" : "\u8D1F") + "\u3002" + (lastG.stats.injured ? "\u5E26\u4F24\u51FA\u6218\u3002" : "") + "\u4F53\u73B0" + player.archetype + "\u98CE\u683C\u3002\u53EA\u8F93\u51FA\u89E3\u8BF4\u8BCD\u3002", lang);
           setNarrative((injEvent ? injEvent + "\n\n" : "") + (txt || "\u7CBE\u5F69\u6BD4\u8D5B\uFF01"));
         } else {
           setNarrative((injEvent || "") + (injEvent ? "\n\n" : "") + (games.length > 1 ? "\u5DF2\u5B8C\u6210 " + games.length + " \u573A\u6A21\u62DF\u3002" : "\u672C\u573A\u7403\u5458\u4F11\u6218\u3002"));
@@ -2166,17 +2170,62 @@
       setSimming(false);
     }
     async function simPlayoffGame(series) {
-      if (simming || !playoffBracket) return;
+      const pb = playoffBracketRef.current || playoffBracket;
+      if (!pb) return;
       setSimming(true);
       setNarrative("");
       setNarrativeCtx(null);
-      const nb = JSON.parse(JSON.stringify(playoffBracket));
-      function findAndSim(confObj) {
-        for (const roundKey of ["r1", "r2", "r3"]) {
-          if (!confObj[roundKey]) continue;
-          const idx = confObj[roundKey].findIndex((s) => s.teamA.abbr === series.teamA.abbr && s.teamB.abbr === series.teamB.abbr);
-          if (idx >= 0) {
-            const s = confObj[roundKey][idx];
+      try {
+        let findAndSim = function(confObj) {
+          for (const roundKey of ["r1", "r2", "r3"]) {
+            if (!confObj[roundKey]) continue;
+            const idx = confObj[roundKey].findIndex((s) => s.teamA.abbr === series.teamA.abbr && s.teamB.abbr === series.teamB.abbr);
+            if (idx >= 0) {
+              const s = confObj[roundKey][idx];
+              if (s.winner) return false;
+              const nextG = s.games.find((g) => g.status === "upcoming");
+              if (!nextG) return false;
+              const isMyMatch = s.teamA.abbr === team.abbr || s.teamB.abbr === team.abbr;
+              const imTeamA = s.teamA.abbr === team.abbr;
+              let curInj = injury;
+              let newInjLog = [...injuryLog];
+              let injEvent = null;
+              if (curInj) {
+                curInj = { ...curInj, daysLeft: (curInj.daysLeft || 0) - 2 };
+                if (curInj.daysLeft <= 0) {
+                  newInjLog.push({ name: curInj.name, date: nextG.date, type: "recovered" });
+                  injEvent = "\u{1F7E2} \u5DF2\u6062\u590D\uFF01";
+                  curInj = null;
+                }
+              } else if (isMyMatch) {
+                const ni = checkNewInjury();
+                if (ni) {
+                  curInj = ni;
+                  newInjLog.push({ name: ni.name, date: nextG.date, days: ni.daysLeft, type: "injured" });
+                  injEvent = "\u{1F534} \u53D7\u4F24\uFF01" + ni.name;
+                }
+              }
+              const res = isMyMatch ? simOneGame(curInj, false) : { pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, win: Math.random() > 0.45, injured: false, rested: false };
+              const aWon = imTeamA ? res.win : !res.win;
+              if (aWon) s.winsA++;
+              else s.winsB++;
+              s.games = s.games.map((g) => g.id === nextG.id ? { ...g, status: aWon ? "won" : "lost", stats: res } : g);
+              if (s.winsA >= 4) {
+                s.winner = s.teamA.abbr;
+              }
+              if (s.winsB >= 4) {
+                s.winner = s.teamB.abbr;
+              }
+              if (isMyMatch) {
+                setInjury(curInj);
+                setInjuryLog(newInjLog);
+                setRelationships((prev) => ({ ...prev, coach: Math.min(100, Math.max(0, prev.coach + (res.win ? 2 : -1))), teammate: Math.min(100, Math.max(0, prev.teammate + (res.win ? 1 : -1))) }));
+              }
+              return { s, nextG, res, injEvent, isMyMatch, imTeamA };
+            }
+          }
+          if (nb.finals && nb.finals.teamA.abbr === series.teamA.abbr && nb.finals.teamB.abbr === series.teamB.abbr) {
+            const s = nb.finals;
             if (s.winner) return false;
             const nextG = s.games.find((g) => g.status === "upcoming");
             if (!nextG) return false;
@@ -2207,112 +2256,72 @@
             s.games = s.games.map((g) => g.id === nextG.id ? { ...g, status: aWon ? "won" : "lost", stats: res } : g);
             if (s.winsA >= 4) {
               s.winner = s.teamA.abbr;
+              nb.champion = s.teamA.abbr;
             }
             if (s.winsB >= 4) {
               s.winner = s.teamB.abbr;
+              nb.champion = s.teamB.abbr;
             }
             if (isMyMatch) {
               setInjury(curInj);
               setInjuryLog(newInjLog);
-              setRelationships((prev) => ({ ...prev, coach: Math.min(100, Math.max(0, prev.coach + (res.win ? 2 : -1))), teammate: Math.min(100, Math.max(0, prev.teammate + (res.win ? 1 : -1))) }));
             }
             return { s, nextG, res, injEvent, isMyMatch, imTeamA };
           }
-        }
-        if (nb.finals && nb.finals.teamA.abbr === series.teamA.abbr && nb.finals.teamB.abbr === series.teamB.abbr) {
-          const s = nb.finals;
-          if (s.winner) return false;
-          const nextG = s.games.find((g) => g.status === "upcoming");
-          if (!nextG) return false;
-          const isMyMatch = s.teamA.abbr === team.abbr || s.teamB.abbr === team.abbr;
-          const imTeamA = s.teamA.abbr === team.abbr;
-          let curInj = injury;
-          let newInjLog = [...injuryLog];
-          let injEvent = null;
-          if (curInj) {
-            curInj = { ...curInj, daysLeft: (curInj.daysLeft || 0) - 2 };
-            if (curInj.daysLeft <= 0) {
-              newInjLog.push({ name: curInj.name, date: nextG.date, type: "recovered" });
-              injEvent = "\u{1F7E2} \u5DF2\u6062\u590D\uFF01";
-              curInj = null;
-            }
-          } else if (isMyMatch) {
-            const ni = checkNewInjury();
-            if (ni) {
-              curInj = ni;
-              newInjLog.push({ name: ni.name, date: nextG.date, days: ni.daysLeft, type: "injured" });
-              injEvent = "\u{1F534} \u53D7\u4F24\uFF01" + ni.name;
-            }
+          return false;
+        }, autoAdvance = function(confObj, confName) {
+          if (!confObj.r1 || confObj.r1.some((s) => !s.winner)) return;
+          if (!confObj.r2 || confObj.r2.length === 0) {
+            const w = confObj.r1.map((s) => s.winner === s.teamA.abbr ? s.teamA : s.teamB);
+            confObj.r2 = [
+              buildSeries(w[0], w[3], confName, "\u534A\u51B3\u8D5B", nb.startYear, 0),
+              buildSeries(w[1], w[2], confName, "\u534A\u51B3\u8D5B", nb.startYear, 1)
+            ];
           }
-          const res = isMyMatch ? simOneGame(curInj, false) : { pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, win: Math.random() > 0.45, injured: false, rested: false };
-          const aWon = imTeamA ? res.win : !res.win;
-          if (aWon) s.winsA++;
-          else s.winsB++;
-          s.games = s.games.map((g) => g.id === nextG.id ? { ...g, status: aWon ? "won" : "lost", stats: res } : g);
-          if (s.winsA >= 4) {
-            s.winner = s.teamA.abbr;
-            nb.champion = s.teamA.abbr;
+          if (!confObj.r2 || confObj.r2.some((s) => !s.winner)) return;
+          if (!confObj.r3 || confObj.r3.length === 0) {
+            const w = confObj.r2.map((s) => s.winner === s.teamA.abbr ? s.teamA : s.teamB);
+            confObj.r3 = [buildSeries(w[0], w[1], confName, "\u5206\u533A\u51B3\u8D5B", nb.startYear, 0)];
           }
-          if (s.winsB >= 4) {
-            s.winner = s.teamB.abbr;
-            nb.champion = s.teamB.abbr;
+          if (!confObj.r3 || confObj.r3.some((s) => !s.winner)) return;
+          const wWest = nb.west.r3 && nb.west.r3[0]?.winner;
+          const wEast = nb.east.r3 && nb.east.r3[0]?.winner;
+          if (wWest && wEast && !nb.finals) {
+            const tW = ALL_TEAMS.find((t2) => t2.abbr === wWest) || { abbr: wWest, name: wWest, city: "", color: "#333", accent: "#fff" };
+            const tE = ALL_TEAMS.find((t2) => t2.abbr === wEast) || { abbr: wEast, name: wEast, city: "", color: "#333", accent: "#fff" };
+            nb.finals = buildSeries(tW, tE, "Finals", "\u603B\u51B3\u8D5B", nb.startYear, 0);
           }
-          if (isMyMatch) {
-            setInjury(curInj);
-            setInjuryLog(newInjLog);
-          }
-          return { s, nextG, res, injEvent, isMyMatch, imTeamA };
+        }, buildSeries = function(tA, tB, confName, rnd, sy, mi) {
+          const isMyMatch = tA.abbr === team.abbr || tB.abbr === team.abbr;
+          const games = Array(7).fill(null).map((_, gi) => ({
+            id: "p_" + confName + "_" + rnd + "_" + mi + "_" + gi,
+            date: new Date(2025, 4, 1 + gi * 2).toISOString(),
+            opp: tA.abbr === team.abbr ? tB.abbr : tA.abbr,
+            home: gi % 2 === 0,
+            status: "upcoming",
+            stats: null,
+            game: gi + 1
+          }));
+          return { round: rnd, conf: confName, teamA: tA, teamB: tB, isMyMatch, winsA: 0, winsB: 0, winner: null, games };
+        };
+        const nb = JSON.parse(JSON.stringify(pb));
+        let result = findAndSim(nb.west);
+        if (!result) result = findAndSim(nb.east);
+        autoAdvance(nb.west, "West");
+        autoAdvance(nb.east, "East");
+        setPlayoffBracket(nb);
+        playoffBracketRef.current = nb;
+        if (result && result.isMyMatch) {
+          const oppT = ALL_TEAMS.find((t2) => t2.abbr === result.nextG.opp) || ALL_TEAMS[0];
+          const myWin = result.imTeamA ? result.s.games.find((g) => g.id === result.nextG.id)?.status === "won" : !(result.s.games.find((g) => g.id === result.nextG.id)?.status === "won");
+          const txt = await aiCall("NBA\u5B63\u540E\u8D5B\u89E3\u8BF4\u5458\u3002\u4E2D\u65873\u53E5\u8BDD\uFF1A" + player.name + "\uFF08" + team.city + team.name + "\uFF09\u5B63\u540E\u8D5B" + result.s.round + "\u5BF9\u9635" + oppT.city + oppT.name + "\u3002" + result.res.pts + "\u5206 " + result.res.ast + "\u52A9 " + result.res.reb + "\u7BEE\uFF0C" + (myWin ? "\u80DC" : "\u8D1F") + "\uFF0C\u7CFB\u5217\u8D5B" + (result.imTeamA ? result.s.winsA : result.s.winsB) + "-" + (result.imTeamA ? result.s.winsB : result.s.winsA) + "\u3002\u53EA\u8F93\u51FA\u89E3\u8BF4\u8BCD\u3002", lang);
+          setNarrative((result.injEvent ? result.injEvent + "\n\n" : "") + (txt || "\u5B63\u540E\u8D5B\u6FC0\u6218\uFF01"));
         }
-        return false;
+      } catch (e) {
+        console.error("simPlayoffGame error:", e);
+      } finally {
+        setSimming(false);
       }
-      let result = findAndSim(nb.west);
-      if (!result) result = findAndSim(nb.east);
-      function autoAdvance(confObj, confName) {
-        if (!confObj.r1 || confObj.r1.some((s) => !s.winner)) return;
-        if (!confObj.r2 || confObj.r2.length === 0) {
-          const w = confObj.r1.map((s) => s.winner === s.teamA.abbr ? s.teamA : s.teamB);
-          confObj.r2 = [
-            buildSeries(w[0], w[3], confName, "\u534A\u51B3\u8D5B", nb.startYear, 0),
-            buildSeries(w[1], w[2], confName, "\u534A\u51B3\u8D5B", nb.startYear, 1)
-          ];
-        }
-        if (!confObj.r2 || confObj.r2.some((s) => !s.winner)) return;
-        if (!confObj.r3 || confObj.r3.length === 0) {
-          const w = confObj.r2.map((s) => s.winner === s.teamA.abbr ? s.teamA : s.teamB);
-          confObj.r3 = [buildSeries(w[0], w[1], confName, "\u5206\u533A\u51B3\u8D5B", nb.startYear, 0)];
-        }
-        if (!confObj.r3 || confObj.r3.some((s) => !s.winner)) return;
-        const wWest = nb.west.r3 && nb.west.r3[0]?.winner;
-        const wEast = nb.east.r3 && nb.east.r3[0]?.winner;
-        if (wWest && wEast && !nb.finals) {
-          const tW = ALL_TEAMS.find((t2) => t2.abbr === wWest) || { abbr: wWest, name: wWest, city: "", color: "#333", accent: "#fff" };
-          const tE = ALL_TEAMS.find((t2) => t2.abbr === wEast) || { abbr: wEast, name: wEast, city: "", color: "#333", accent: "#fff" };
-          nb.finals = buildSeries(tW, tE, "Finals", "\u603B\u51B3\u8D5B", nb.startYear, 0);
-        }
-      }
-      function buildSeries(tA, tB, confName, rnd, sy, mi) {
-        const isMyMatch = tA.abbr === team.abbr || tB.abbr === team.abbr;
-        const games = Array(7).fill(null).map((_, gi) => ({
-          id: "p_" + confName + "_" + rnd + "_" + mi + "_" + gi,
-          date: new Date(2025, 4, 1 + gi * 2).toISOString(),
-          opp: tA.abbr === team.abbr ? tB.abbr : tA.abbr,
-          home: gi % 2 === 0,
-          status: "upcoming",
-          stats: null,
-          game: gi + 1
-        }));
-        return { round: rnd, conf: confName, teamA: tA, teamB: tB, isMyMatch, winsA: 0, winsB: 0, winner: null, games };
-      }
-      autoAdvance(nb.west, "West");
-      autoAdvance(nb.east, "East");
-      setPlayoffBracket(nb);
-      if (result && result.isMyMatch) {
-        const oppT = ALL_TEAMS.find((t2) => t2.abbr === result.nextG.opp) || ALL_TEAMS[0];
-        const myWin = result.imTeamA ? result.s.games.find((g) => g.id === result.nextG.id)?.status === "won" : !(result.s.games.find((g) => g.id === result.nextG.id)?.status === "won");
-        const txt = await aiCall("NBA\u5B63\u540E\u8D5B\u89E3\u8BF4\u5458\u3002\u4E2D\u65873\u53E5\u8BDD\uFF1A" + player.name + "\uFF08" + team.city + team.name + "\uFF09\u5B63\u540E\u8D5B" + result.s.round + "\u5BF9\u9635" + oppT.city + oppT.name + "\u3002" + result.res.pts + "\u5206 " + result.res.ast + "\u52A9 " + result.res.reb + "\u7BEE\uFF0C" + (myWin ? "\u80DC" : "\u8D1F", lang) + "\uFF0C\u7CFB\u5217\u8D5B" + (result.imTeamA ? result.s.winsA : result.s.winsB) + "-" + (result.imTeamA ? result.s.winsB : result.s.winsA) + "\u3002\u53EA\u8F93\u51FA\u89E3\u8BF4\u8BCD\u3002", lang);
-        setNarrative((result.injEvent ? result.injEvent + "\n\n" : "") + (txt || "\u5B63\u540E\u8D5B\u6FC0\u6218\uFF01"));
-      }
-      setSimming(false);
     }
     function allocTrain(stat, delta) {
       const c = trainAlloc[stat];
@@ -2330,16 +2339,19 @@
       setTrainAlloc({ speed: 0, shooting: 0, passing: 0, defense: 0, strength: 0, iq: 0 });
     }
     async function autoSimAllPlayoffs() {
-      if (!playoffBracket || playoffBracket.champion) return;
+      const initial = playoffBracketRef.current || playoffBracket;
+      if (!initial || initial.champion) return;
       for (let safety = 0; safety < 200; safety++) {
+        const pb = playoffBracketRef.current;
+        if (!pb || pb.champion) break;
         const allSeries = [];
-        if (playoffBracket.west) ["r1", "r2", "r3"].forEach((k) => (playoffBracket.west[k] || []).forEach((s) => allSeries.push(s)));
-        if (playoffBracket.east) ["r1", "r2", "r3"].forEach((k) => (playoffBracket.east[k] || []).forEach((s) => allSeries.push(s)));
-        if (playoffBracket.finals) allSeries.push(playoffBracket.finals);
+        if (pb.west) ["r1", "r2", "r3"].forEach((k) => (pb.west[k] || []).forEach((s) => allSeries.push(s)));
+        if (pb.east) ["r1", "r2", "r3"].forEach((k) => (pb.east[k] || []).forEach((s) => allSeries.push(s)));
+        if (pb.finals) allSeries.push(pb.finals);
         const next = allSeries.find((s) => !s.winner);
         if (!next) break;
         await simPlayoffGame(next);
-        await new Promise((r) => setTimeout(r, 30));
+        await new Promise((r) => setTimeout(r, 50));
       }
     }
     function startNextSeason() {
