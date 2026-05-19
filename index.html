@@ -67,7 +67,7 @@
   <!-- Game bundle (compiled from src/App.tsx via esbuild) -->
   <script>
 (() => {
-  // ../../../../../../private/tmp/nba_d2/react-shim.ts
+  // src/react-shim.ts
   var R = typeof window !== "undefined" ? window.React : globalThis.React;
   var react_shim_default = R;
   var useState = R.useState;
@@ -78,7 +78,7 @@
   var Fragment = R.Fragment;
   var createElement = R.createElement;
 
-  // ../../../../../../private/tmp/nba_d2/App.new.tsx
+  // src/App.tsx
   var POSITIONS = ["PG", "SG", "SF", "PF", "C"];
   var PRESET_ARCHETYPES = {
     PG: ["\u95EA\u7535\u63A7\u536B", "\u7EC4\u7EC7\u5927\u5E08", "\u5F97\u5206\u578B\u63A7\u536B"],
@@ -239,7 +239,14 @@
   function writeSaves(s) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+      return true;
     } catch (e) {
+      const isQuota = e && (e.name === "QuotaExceededError" || e.code === 22);
+      if (isQuota && !window.__nbaQuotaWarned) {
+        window.__nbaQuotaWarned = true;
+        alert("\u26A0\uFE0F \u5B58\u6863\u7A7A\u95F4\u4E0D\u8DB3\uFF01\n\n\u7528\u53F3\u4E0B\u89D2\u7684 \u2B07\u5907\u4EFD \u6309\u94AE\u5BFC\u51FA\u73B0\u6709\u5B58\u6863\u5230\u672C\u5730\u6587\u4EF6\uFF0C\n\u7136\u540E\u5220\u6389\u51E0\u4E2A\u65E7\u5B58\u6863\u91CA\u653E\u7A7A\u95F4\uFF0C\u518D\u7EE7\u7EED\u6E38\u620F\u3002");
+      }
+      return false;
     }
   }
   function calcOverall(stats) {
@@ -694,21 +701,50 @@
     const [custom, setCustom] = useState(false);
     const [ctext, setCtext] = useState("");
     const [age, setAge] = useState(19);
+    const [physicals, setPhysicals] = useState(() => generatePhysicals(pos));
+    useEffect(() => {
+      setPhysicals(generatePhysicals(pos));
+    }, [pos]);
+    const heightRange = HEIGHTS_BY_POS[pos][0];
+    const weightRange = WEIGHTS_BY_POS[pos];
     const finalArc = custom ? ctext : arc;
+    function rerollPhysicals() {
+      setPhysicals(generatePhysicals(pos));
+    }
+    function randomizeName() {
+      const pool = buildNamePool();
+      setName(pool[Math.floor(Math.random() * pool.length)]);
+    }
+    function setHeight(v) {
+      setPhysicals((p) => ({ ...p, heightCm: v, wingspanCm: v + p.wingDelta }));
+    }
+    function setWingDelta(d) {
+      setPhysicals((p) => ({ ...p, wingDelta: d, wingspanCm: p.heightCm + d }));
+    }
+    function setWeight(w) {
+      setPhysicals((p) => ({ ...p, weightKg: w }));
+    }
     function submit() {
       if (!name.trim() || !finalArc.trim()) return;
       const ceiling = generatePotential(pos, finalArc);
       const ageBoost = age >= 23 ? 0.05 : age <= 19 ? -0.03 : 0;
       const stats = generateInitialStats(pos, ceiling, ageBoost);
-      const physicals = generatePhysicals(pos);
       onDone({ name: name.trim(), position: pos, archetype: finalArc.trim(), stats, ceiling, overall: calcOverall(stats), physicals, age });
     }
-    return /* @__PURE__ */ react_shim_default.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff", fontFamily: "sans-serif" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "linear-gradient(180deg,#1a1a2e,#0a0a0f)", padding: "32px 20px 20px", display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ react_shim_default.createElement("button", { onClick: onBack, style: { background: "#ffffff11", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "sans-serif", fontSize: 13 } }, "\u8FD4\u56DE"), /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 3 } }, "NEW CAREER"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 24, fontWeight: 900 } }, "\u521B\u5EFA\u7403\u5458"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 20, maxWidth: 440, margin: "0 auto" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 18 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 2, marginBottom: 8 } }, "\u7403\u5458\u59D3\u540D"), /* @__PURE__ */ react_shim_default.createElement(
+    return /* @__PURE__ */ react_shim_default.createElement("div", { style: { minHeight: "100vh", background: "#0a0a0f", color: "#fff", fontFamily: "sans-serif" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "linear-gradient(180deg,#1a1a2e,#0a0a0f)", padding: "32px 20px 20px", display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ react_shim_default.createElement("button", { onClick: onBack, style: { background: "#ffffff11", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "sans-serif", fontSize: 13 } }, "\u8FD4\u56DE"), /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 3 } }, "NEW CAREER"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 24, fontWeight: 900 } }, "\u521B\u5EFA\u7403\u5458"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 20, maxWidth: 440, margin: "0 auto" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 18 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 2 } }, "\u7403\u5458\u59D3\u540D"), /* @__PURE__ */ react_shim_default.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: randomizeName,
+        style: { fontSize: 11, color: "#88aaff", background: "transparent", border: "1px solid #88aaff44", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "sans-serif" }
+      },
+      "\u{1F3B2} \u968F\u673A"
+    )), /* @__PURE__ */ react_shim_default.createElement(
       "input",
       {
         value: name,
         onChange: (e) => setName(e.target.value),
-        placeholder: "\u8F93\u5165\u4F60\u7684\u540D\u5B57...",
+        placeholder: "\u8F93\u5165\u4F60\u7684\u540D\u5B57\u6216\u70B9\u51FB\u968F\u673A...",
         style: { width: "100%", padding: "14px 16px", background: "#111827", border: "1px solid #ffffff22", borderRadius: 10, color: "#fff", fontSize: 16, boxSizing: "border-box", outline: "none", fontFamily: "sans-serif" }
       }
     )), /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 18 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 2, marginBottom: 8 } }, "\u4F4D\u7F6E"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 8 } }, POSITIONS.map((p) => /* @__PURE__ */ react_shim_default.createElement(
@@ -769,7 +805,45 @@
         onChange: (e) => setAge(parseInt(e.target.value)),
         style: { width: "100%", accentColor: "#f9a01b" }
       }
-    ), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 10, color: "#555", marginTop: 4 } }, /* @__PURE__ */ react_shim_default.createElement("span", null, "18 \xB7 \u9AD8\u6F5C\u529B"), /* @__PURE__ */ react_shim_default.createElement("span", null, "22"), /* @__PURE__ */ react_shim_default.createElement("span", null, "26 \xB7 \u5DF2\u6210\u719F")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#666", marginTop: 6, lineHeight: 1.5 } }, "\u5E74\u9F84\u8D8A\u5927\u521D\u59CB\u5C5E\u6027\u8D8A\u9AD8\uFF0C\u4F46\u751F\u6DAF\u8D8A\u77ED\u300232 \u5C81\u540E\u6F5C\u529B\u5F00\u59CB\u8870\u9000\u3002")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#0f1923", borderRadius: 10, padding: 14, marginBottom: 20, border: "1px solid #f9a01b22" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", marginBottom: 4 } }, "\u26A0 \u6F5C\u529B\u8BF4\u660E"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#888", lineHeight: 1.6 } }, "\u5C5E\u6027\u4E0A\u9650\u5B8C\u5168\u968F\u673A\uFF0C\u8EAB\u4F53\u5929\u8D4B\u4E5F\u5404\u4E0D\u76F8\u540C\u3002\u4F24\u75C5\u53EF\u80FD\u6C38\u4E45\u9650\u5236\u6210\u957F\u7A7A\u95F4\u3002\u53D1\u6325\u6253\u6CD5\u7279\u70B9\u624D\u80FD\u6700\u5927\u5316\u6F5C\u529B\u3002")), /* @__PURE__ */ react_shim_default.createElement(
+    ), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 10, color: "#555", marginTop: 4 } }, /* @__PURE__ */ react_shim_default.createElement("span", null, "18 \xB7 \u9AD8\u6F5C\u529B"), /* @__PURE__ */ react_shim_default.createElement("span", null, "22"), /* @__PURE__ */ react_shim_default.createElement("span", null, "26 \xB7 \u5DF2\u6210\u719F")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#666", marginTop: 6, lineHeight: 1.5 } }, "\u5E74\u9F84\u8D8A\u5927\u521D\u59CB\u5C5E\u6027\u8D8A\u9AD8\uFF0C\u4F46\u751F\u6DAF\u8D8A\u77ED\u300232 \u5C81\u540E\u6F5C\u529B\u5F00\u59CB\u8870\u9000\u3002")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 18, background: "#0d1117", borderRadius: 10, padding: 14, border: "1px solid #ffffff11" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", letterSpacing: 2 } }, "\u8EAB\u4F53\u6570\u636E"), /* @__PURE__ */ react_shim_default.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: rerollPhysicals,
+        style: { fontSize: 11, color: "#88aaff", background: "transparent", border: "1px solid #88aaff44", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "sans-serif" }
+      },
+      "\u{1F3B2} \u968F\u673A\u91CD\u7F6E"
+    )), /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 10 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 11, color: "#aaa", marginBottom: 4 } }, /* @__PURE__ */ react_shim_default.createElement("span", null, "\u8EAB\u9AD8"), /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#fff", fontWeight: 700 } }, physicals.heightCm, " cm")), /* @__PURE__ */ react_shim_default.createElement(
+      "input",
+      {
+        type: "range",
+        min: heightRange[0],
+        max: heightRange[1],
+        value: physicals.heightCm,
+        onChange: (e) => setHeight(parseInt(e.target.value)),
+        style: { width: "100%", accentColor: "#f9a01b" }
+      }
+    ), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 9, color: "#555" } }, /* @__PURE__ */ react_shim_default.createElement("span", null, heightRange[0]), /* @__PURE__ */ react_shim_default.createElement("span", null, heightRange[1]))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 10 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 11, color: "#aaa", marginBottom: 4 } }, /* @__PURE__ */ react_shim_default.createElement("span", null, "\u81C2\u5C55"), /* @__PURE__ */ react_shim_default.createElement("span", null, /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#fff", fontWeight: 700 } }, physicals.wingspanCm, " cm"), " ", /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: physicals.wingDelta >= 6 ? "#00ff88" : physicals.wingDelta < 0 ? "#ff8888" : "#666", fontSize: 10 } }, "(", physicals.wingDelta > 0 ? "+" : "", physicals.wingDelta, ")"))), /* @__PURE__ */ react_shim_default.createElement(
+      "input",
+      {
+        type: "range",
+        min: -3,
+        max: 12,
+        value: physicals.wingDelta,
+        onChange: (e) => setWingDelta(parseInt(e.target.value)),
+        style: { width: "100%", accentColor: "#f9a01b" }
+      }
+    ), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 9, color: "#555" } }, /* @__PURE__ */ react_shim_default.createElement("span", null, "-3"), /* @__PURE__ */ react_shim_default.createElement("span", null, "0"), /* @__PURE__ */ react_shim_default.createElement("span", null, "+12"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 6 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 11, color: "#aaa", marginBottom: 4 } }, /* @__PURE__ */ react_shim_default.createElement("span", null, "\u4F53\u91CD"), /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#fff", fontWeight: 700 } }, physicals.weightKg, " kg")), /* @__PURE__ */ react_shim_default.createElement(
+      "input",
+      {
+        type: "range",
+        min: weightRange[0],
+        max: weightRange[1],
+        value: physicals.weightKg,
+        onChange: (e) => setWeight(parseInt(e.target.value)),
+        style: { width: "100%", accentColor: "#f9a01b" }
+      }
+    ), /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 9, color: "#555" } }, /* @__PURE__ */ react_shim_default.createElement("span", null, weightRange[0]), /* @__PURE__ */ react_shim_default.createElement("span", null, weightRange[1]))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#666", marginTop: 8, lineHeight: 1.6 } }, "\u9759\u6001\u5929\u8D4B\uFF1A", physicals.staticTraits.join("\u3001"), /* @__PURE__ */ react_shim_default.createElement("br", null), "\u52A8\u6001\u5929\u8D4B\uFF1A", physicals.dynamicTraits.join("\u3001"), /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#444" } }, " (\u5929\u8D4B\u968F\u673A\u751F\u6210\uFF0C\u53EF\u91CD\u7F6E)"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#0f1923", borderRadius: 10, padding: 14, marginBottom: 20, border: "1px solid #f9a01b22" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", marginBottom: 4 } }, "\u26A0 \u6F5C\u529B\u8BF4\u660E"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#888", lineHeight: 1.6 } }, "\u5C5E\u6027\u4E0A\u9650\u5B8C\u5168\u968F\u673A\uFF0C\u8EAB\u4F53\u5929\u8D4B\u4E5F\u5404\u4E0D\u76F8\u540C\u3002\u4F24\u75C5\u53EF\u80FD\u6C38\u4E45\u9650\u5236\u6210\u957F\u7A7A\u95F4\u3002\u53D1\u6325\u6253\u6CD5\u7279\u70B9\u624D\u80FD\u6700\u5927\u5316\u6F5C\u529B\u3002")), /* @__PURE__ */ react_shim_default.createElement(
       "button",
       {
         onClick: submit,
@@ -1040,6 +1114,13 @@
     const wins = regularGames.filter((g) => g.status === "won").length;
     const seasonOver = regularGames.filter((g) => g.status === "upcoming").length === 0;
     const totalAlloc = Object.values(trainAlloc).reduce((a, b) => a + b, 0);
+    const avg = useMemo(() => {
+      const pg = played.filter((g) => g.stats);
+      if (!pg.length) return { pts: 0, ast: 0, reb: 0, stl: 0, blk: 0 };
+      const s = pg.reduce((a, g) => ({ pts: a.pts + g.stats.pts, ast: a.ast + g.stats.ast, reb: a.reb + g.stats.reb, stl: a.stl + g.stats.stl, blk: a.blk + g.stats.blk }), { pts: 0, ast: 0, reb: 0, stl: 0, blk: 0 });
+      const n = pg.length;
+      return { pts: +(s.pts / n).toFixed(1), ast: +(s.ast / n).toFixed(1), reb: +(s.reb / n).toFixed(1), stl: +(s.stl / n).toFixed(1), blk: +(s.blk / n).toFixed(1) };
+    }, [played]);
     const maxTrainPoints = useMemo(() => {
       let pts = 6;
       if (avg.pts > 25 && avg.ast > 5 && wins > 50 && player.overall > 85) pts += 2;
@@ -1050,13 +1131,6 @@
       if (age > 35) pts -= 1;
       return Math.max(3, Math.min(9, pts));
     }, [avg.pts, avg.ast, wins, player.overall, player.age]);
-    const avg = useMemo(() => {
-      const pg = played.filter((g) => g.stats);
-      if (!pg.length) return { pts: 0, ast: 0, reb: 0, stl: 0, blk: 0 };
-      const s = pg.reduce((a, g) => ({ pts: a.pts + g.stats.pts, ast: a.ast + g.stats.ast, reb: a.reb + g.stats.reb, stl: a.stl + g.stats.stl, blk: a.blk + g.stats.blk }), { pts: 0, ast: 0, reb: 0, stl: 0, blk: 0 });
-      const n = pg.length;
-      return { pts: +(s.pts / n).toFixed(1), ast: +(s.ast / n).toFixed(1), reb: +(s.reb / n).toFixed(1), stl: +(s.stl / n).toFixed(1), blk: +(s.blk / n).toFixed(1) };
-    }, [played]);
     const doSave = useCallback(() => {
       const saves = loadSaves();
       saves[saveId] = {
@@ -1469,8 +1543,26 @@
       setShowAwards(false);
       setFaOffers([]);
       const annualSavings = contract.salary * 0.6;
-      const rentCost = currentRental ? currentRental.monthly * 12 : 0;
-      setSavings((prev) => Math.max(0, +(prev + annualSavings - rentCost).toFixed(2)));
+      let nextRent = currentRental;
+      let extraRentCharge = 0;
+      if (currentRental) {
+        const newMonthsLeft = (currentRental.monthsLeft || 0) - 12;
+        if (newMonthsLeft <= 0) {
+          const annualCost = +(currentRental.monthly * 12).toFixed(2);
+          const willHaveAfterSalary = +(savings + annualSavings).toFixed(2);
+          if (willHaveAfterSalary >= annualCost) {
+            extraRentCharge = annualCost;
+            nextRent = { ...currentRental, monthsLeft: 12 };
+          } else {
+            nextRent = null;
+            extraRentCharge = 0;
+          }
+        } else {
+          nextRent = { ...currentRental, monthsLeft: newMonthsLeft };
+        }
+      }
+      setCurrentRental(nextRent);
+      setSavings((prev) => Math.max(0, +(prev + annualSavings - extraRentCharge).toFixed(2)));
       const finalsAvg = calcFinalsAvg(playoffBracket, team.abbr);
       const awards = generateSeasonAwards(player.name, team.abbr, team.name, avg, player.overall, wins, season, playoffBracket, finalsAvg);
       setSeasonAwards(awards);
@@ -1750,10 +1842,22 @@
         style: { width: "100%", marginTop: 12, padding: "10px 0", background: team.color, border: "1px solid " + ac, borderRadius: 10, color: ac, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "sans-serif" }
       },
       "\u{1F4BC} \u5F00\u59CB\u7EED\u7EA6\u8C08\u5224"
-    )), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 2, marginBottom: 10 } }, "\u54C1\u724C\u5408\u4F5C"), brands.length === 0 ? /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 20, textAlign: "center", color: "#444", marginBottom: 12 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 28, marginBottom: 8 } }, "\u{1F4E6}"), /* @__PURE__ */ react_shim_default.createElement("div", null, "\u8FD8\u6CA1\u6709\u54C1\u724C\u5408\u4F5C"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, marginTop: 4 } }, "\u6253\u51FA\u6210\u7EE9\uFF0C\u7ECF\u7EAA\u4EBA\u81EA\u7136\u4F1A\u5E26\u6765\u597D\u6D88\u606F")) : brands.map((b, i) => /* @__PURE__ */ react_shim_default.createElement("div", { key: i, style: { background: "#111827", borderRadius: 12, padding: 14, marginBottom: 10, border: "1px solid #ffffff0d", display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, fontWeight: 700 } }, b.icon, " ", b.name), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#888" } }, b.type)), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: "#00ff88" } }, "$", b.offer, "M/\u5E74"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#0f1923", borderRadius: 10, padding: 14, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", marginBottom: 6 } }, "\u5E74\u5EA6\u603B\u6536\u5165"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 22, fontWeight: 700, color: "#ffd700" } }, "$", (contract.salary + brands.reduce((a, b) => a + b.offer, 0)).toFixed(1), "M"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#555" } }, "\u5408\u540C $", contract.salary, "M + \u4EE3\u8A00 $", brands.reduce((a, b) => a + b.offer, 0).toFixed(1), "M"))), view === "finances" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 14 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, marginBottom: 12, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 4 } }, "\u4E2A\u4EBA\u8D22\u4EA7"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 38, fontWeight: 900, color: "#ffd700" } }, "$", savings.toFixed(2), "M"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#555", marginTop: 2 } }, "\u50A8\u84C4 \xB7 \u7A0E\u540E\u6536\u5165\u6BCF\u8D5B\u5B63\u81EA\u52A8\u5165\u8D26"), currentRental && /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", marginTop: 4 } }, "\u{1F3E0} \u79DF\u623F\u4E2D\uFF1A", currentRental.name, " \xB7 $", (currentRental.monthly * 12).toFixed(2), "M/\u5E74"), ownedHouse && /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#00ff88", marginTop: 4 } }, "\u{1F3E1} \u5DF2\u8D2D\u623F\uFF1A", ownedHouse.name, "\uFF08", ownedHouse.city, "\uFF09")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 8 } }, "\u4F4F\u623F"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 14, marginBottom: 12, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#666", marginBottom: 10 } }, "\u5F53\u524D\u57CE\u5E02\uFF1A", team.city), !ownedHouse && /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 10 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", marginBottom: 6 } }, "\u79DF\u623F\u9009\u9879\uFF08\u6BCF\u5E74\u6263\u9664\uFF09"), RENT_OPTIONS.map((r) => {
+    )), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 2, marginBottom: 10 } }, "\u54C1\u724C\u5408\u4F5C"), brands.length === 0 ? /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 20, textAlign: "center", color: "#444", marginBottom: 12 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 28, marginBottom: 8 } }, "\u{1F4E6}"), /* @__PURE__ */ react_shim_default.createElement("div", null, "\u8FD8\u6CA1\u6709\u54C1\u724C\u5408\u4F5C"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, marginTop: 4 } }, "\u6253\u51FA\u6210\u7EE9\uFF0C\u7ECF\u7EAA\u4EBA\u81EA\u7136\u4F1A\u5E26\u6765\u597D\u6D88\u606F")) : brands.map((b, i) => /* @__PURE__ */ react_shim_default.createElement("div", { key: i, style: { background: "#111827", borderRadius: 12, padding: 14, marginBottom: 10, border: "1px solid #ffffff0d", display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 14, fontWeight: 700 } }, b.icon, " ", b.name), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#888" } }, b.type)), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: "#00ff88" } }, "$", b.offer, "M/\u5E74"))), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#0f1923", borderRadius: 10, padding: 14, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", marginBottom: 6 } }, "\u5E74\u5EA6\u603B\u6536\u5165"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 22, fontWeight: 700, color: "#ffd700" } }, "$", (contract.salary + brands.reduce((a, b) => a + b.offer, 0)).toFixed(1), "M"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#555" } }, "\u5408\u540C $", contract.salary, "M + \u4EE3\u8A00 $", brands.reduce((a, b) => a + b.offer, 0).toFixed(1), "M"))), view === "finances" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 14 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, marginBottom: 12, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 4 } }, "\u4E2A\u4EBA\u8D22\u4EA7"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 38, fontWeight: 900, color: "#ffd700" } }, "$", savings.toFixed(2), "M"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#555", marginTop: 2 } }, "\u50A8\u84C4 \xB7 \u7A0E\u540E\u6536\u5165\u6BCF\u8D5B\u5B63\u81EA\u52A8\u5165\u8D26"), currentRental && /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", marginTop: 4 } }, "\u{1F3E0} \u79DF\u623F\u4E2D\uFF1A", currentRental.name, " \xB7 $", (currentRental.monthly * 12).toFixed(2), "M/\u5E74 \xB7 \u5269\u4F59 ", currentRental.monthsLeft || 12, " \u4E2A\u6708"), ownedHouse && /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#00ff88", marginTop: 4 } }, "\u{1F3E1} \u5DF2\u8D2D\u623F\uFF1A", ownedHouse.name, "\uFF08", ownedHouse.city, "\uFF09")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 8 } }, "\u4F4F\u623F"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 14, marginBottom: 12, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#666", marginBottom: 10 } }, "\u5F53\u524D\u57CE\u5E02\uFF1A", team.city), !ownedHouse && /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginBottom: 10 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", marginBottom: 6 } }, "\u79DF\u623F\u9009\u9879\uFF08\u6BCF\u5E74\u6263\u9664\uFF09"), RENT_OPTIONS.map((r) => {
       const isRenting = currentRental?.id === r.id;
       const canAfford = savings >= r.monthly;
-      return /* @__PURE__ */ react_shim_default.createElement("div", { key: r.id, style: { background: isRenting ? "#1a2a0d" : "#0d1117", borderRadius: 8, padding: "10px 12px", marginBottom: 6, border: "1px solid " + (isRenting ? "#00ff8844" : "#ffffff0d"), display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: isRenting ? "#00ff88" : "#ccc" } }, r.icon, " ", r.name), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#555" } }, r.desc, " \xB7 $", (r.monthly * 12).toFixed(2), "M/\u5E74")), /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => setCurrentRental(isRenting ? null : r), style: { padding: "5px 12px", background: isRenting ? "#2a0d0d" : "#1a2a1a", border: "1px solid " + (isRenting ? "#ff444444" : "#00ff8844"), borderRadius: 8, color: isRenting ? "#ff8888" : "#00ff88", fontSize: 11, cursor: "pointer", fontFamily: "sans-serif" } }, isRenting ? "\u9000\u79DF" : "\u79DF\u623F"));
+      return /* @__PURE__ */ react_shim_default.createElement("div", { key: r.id, style: { background: isRenting ? "#1a2a0d" : "#0d1117", borderRadius: 8, padding: "10px 12px", marginBottom: 6, border: "1px solid " + (isRenting ? "#00ff8844" : "#ffffff0d"), display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ react_shim_default.createElement("div", null, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: isRenting ? "#00ff88" : "#ccc" } }, r.icon, " ", r.name), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#555" } }, r.desc, " \xB7 $", (r.monthly * 12).toFixed(2), "M/\u5E74")), /* @__PURE__ */ react_shim_default.createElement("button", { onClick: () => {
+        if (isRenting) {
+          setCurrentRental(null);
+        } else {
+          const cost = +(r.monthly * 12).toFixed(2);
+          if (savings < cost) {
+            alert("\u8D44\u91D1\u4E0D\u8DB3\uFF0C\u9700\u8981 $" + cost + "M \u624D\u80FD\u9884\u4ED8\u4E00\u5E74\u79DF\u91D1");
+            return;
+          }
+          setSavings((s) => +(s - cost).toFixed(2));
+          setCurrentRental({ ...r, monthsLeft: 12, prepaid: cost });
+        }
+      }, style: { padding: "5px 12px", background: isRenting ? "#2a0d0d" : "#1a2a1a", border: "1px solid " + (isRenting ? "#ff444444" : "#00ff8844"), borderRadius: 8, color: isRenting ? "#ff8888" : "#00ff88", fontSize: 11, cursor: "pointer", fontFamily: "sans-serif" } }, isRenting ? "\u9000\u79DF" : "\u79DF\u623F (\u9884\u4ED81\u5E74)"));
     })), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#f9a01b", marginBottom: 6 } }, "\u8D2D\u623F\uFF08", team.city, "\uFF09"), HOUSES.map((h) => {
       const affordable = savings >= h.price;
       const isOwned = ownedHouse?.id === h.id;
