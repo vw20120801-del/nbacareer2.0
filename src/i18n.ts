@@ -517,6 +517,17 @@ export const DICT: Record<string, Entry> = {
 
   // Career complete card extras
   "retire.position_age": { zh: "{city} {team} · {pos} · {age} 岁", en: "{city} {team} · {pos} · Age {age}" },
+
+  // Simulation event banners (shown in narrative box after sim batches)
+  "sim.recovered_from": { zh: "🟢 已从「{name}」中恢复！", en: "🟢 Recovered from {name}!" },
+  "sim.recovered_short": { zh: "🟢 已恢复！", en: "🟢 Back to full health!" },
+  "sim.injured": { zh: "🔴 受伤！{name}，预计缺席 {n} 天", en: "🔴 Injured! {name} — out approximately {n} days" },
+  "sim.injured_short": { zh: "🔴 受伤！{name}", en: "🔴 Injured! {name}" },
+  "sim.completed_n_games": { zh: "已完成 {n} 场模拟。", en: "Simulated {n} games." },
+  "sim.rested_this_game": { zh: "本场球员休战。", en: "Player rested this game." },
+
+  // Calendar bottom-row buttons (sim batches)
+  "cal.simming": { zh: "模拟中...", en: "Simming..." },
 };
 
 // ── English name pool (parallel to NAME_FIRST × NAME_LAST in Chinese) ────────
