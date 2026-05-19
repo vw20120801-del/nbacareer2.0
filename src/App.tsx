@@ -969,22 +969,23 @@ function StandingsView({standings, myTeamAbbr, ac}: any) {
         <span>#</span><span>{t("standings.col_team", lang)}</span><span style={{textAlign:"center"}}>{t("standings.col_w", lang)}</span><span style={{textAlign:"center"}}>{t("standings.col_l", lang)}</span><span style={{textAlign:"right"}}>{t("standings.col_pct", lang)}</span>
       </div>
 
-      {data.map((t,i)=>{
-        const isMine = t.abbr===myTeamAbbr;
+      {data.map((tm,i)=>{
+        // Renamed loop var from `t` → `tm` to avoid shadowing the i18n `t()` function.
+        const isMine = tm.abbr===myTeamAbbr;
         const sl = seedLabel(i);
-        const pctStr = t.gp>0 ? (t.pct).toFixed(3).replace("0.",".")  : "-";
+        const pctStr = tm.gp>0 ? (tm.pct).toFixed(3).replace("0.",".")  : "-";
         return (
-          <div key={t.abbr} style={{display:"grid",gridTemplateColumns:"24px 1fr 36px 36px 50px",gap:4,padding:"9px 10px",background:isMine?ac+"18":"transparent",borderBottom:"1px solid #ffffff06",borderLeft:isMine?"3px solid "+ac:"3px solid transparent",alignItems:"center"}}>
+          <div key={tm.abbr} style={{display:"grid",gridTemplateColumns:"24px 1fr 36px 36px 50px",gap:4,padding:"9px 10px",background:isMine?ac+"18":"transparent",borderBottom:"1px solid #ffffff06",borderLeft:isMine?"3px solid "+ac:"3px solid transparent",alignItems:"center"}}>
             <span style={{fontSize:11,color:sl.color,fontWeight:700}}>{i+1}</span>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{width:8,height:8,borderRadius:2,background:t.color,border:"1px solid "+t.accent,flexShrink:0}}/>
+              <div style={{width:8,height:8,borderRadius:2,background:tm.color,border:"1px solid "+tm.accent,flexShrink:0}}/>
               <div>
-                <div style={{fontSize:12,fontWeight:isMine?700:400,color:isMine?"#fff":"#ccc"}}>{t.city} {t.name}</div>
+                <div style={{fontSize:12,fontWeight:isMine?700:400,color:isMine?"#fff":"#ccc"}}>{teamCity(tm.abbr, lang)} {teamName(tm.abbr, lang)}</div>
                 {isMine && <div style={{fontSize:9,color:ac}}>{t("standings.your_team", lang)}</div>}
               </div>
             </div>
-            <span style={{textAlign:"center",fontSize:13,fontWeight:700,color:"#00ff88"}}>{t.wins}</span>
-            <span style={{textAlign:"center",fontSize:13,color:"#ff5555"}}>{t.losses}</span>
+            <span style={{textAlign:"center",fontSize:13,fontWeight:700,color:"#00ff88"}}>{tm.wins}</span>
+            <span style={{textAlign:"center",fontSize:13,color:"#ff5555"}}>{tm.losses}</span>
             <span style={{textAlign:"right",fontSize:12,color:"#aaa"}}>{pctStr}</span>
           </div>
         );
@@ -2191,7 +2192,7 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
                 return (
                   <div key={opt.id} style={{background:"#111827",borderRadius:12,padding:14,marginBottom:10,border:"1px solid "+(alloc>0?ac+"44":"#ffffff0d"),opacity:atCap?0.4:1}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                      <div><div style={{fontSize:14,fontWeight:700}}>{opt.icon} {tx(otx(pt.label, lang), lang)}</div><div style={{fontSize:11,color:"#555",marginTop:2}}>{tx(opt.desc, lang)}{atCap?" · 已达上限":""}</div></div>
+                      <div><div style={{fontSize:14,fontWeight:700}}>{opt.icon} {tx(opt.label, lang)}</div><div style={{fontSize:11,color:"#555",marginTop:2}}>{tx(opt.desc, lang)}{atCap?t("training.at_cap", lang):""}</div></div>
                       <div style={{textAlign:"right"}}><div style={{fontSize:11,color:"#666"}}>{tx(STAT_LABELS[opt.stat], lang)} /{cap}</div><div style={{fontSize:15,fontWeight:700,color:alloc>0?"#00ff88":ac}}>{cur}{alloc>0&&<span style={{fontSize:12,color:"#00ff88"}}> → {proj}</span>}</div></div>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
