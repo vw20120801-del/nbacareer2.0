@@ -927,7 +927,8 @@ function DraftScreen({player, onDrafted, onBack, lang, setLang}: any) {
 
 // ════════════════ MAIN SCREEN ════════════════
 // ════════════════ STANDINGS VIEW ════════════════
-function StandingsView({standings, myTeamAbbr, ac}) {
+function StandingsView({standings, myTeamAbbr, ac}: any) {
+  const lang = useLang();
   const [tab, setTab] = useState("west");
   if(!standings) return (
     <div style={{padding:20,textAlign:"center",color:"#444"}}>
@@ -1001,7 +1002,8 @@ function StandingsView({standings, myTeamAbbr, ac}) {
 }
 
 // ════════════════ PLAYOFF VIEW ════════════════
-function SeriesCard({series, myTeamAbbr, teamColor, ac, onSimGame, simming}) {
+function SeriesCard({series, myTeamAbbr, teamColor, ac, onSimGame, simming}: any) {
+  const lang = useLang();
   if(!series) return null;
   const isMyMatch = series.teamA.abbr===myTeamAbbr||series.teamB.abbr===myTeamAbbr;
   const myTeam = series.teamA.abbr===myTeamAbbr ? series.teamA : series.teamB;
@@ -1071,6 +1073,7 @@ function SeriesCard({series, myTeamAbbr, teamColor, ac, onSimGame, simming}) {
 }
 
 function PlayoffView({bracket, myTeam, onSimGame, simming, onOffseason, onAutoSimAll, ac, narrative, narrativeCtx}: any) {
+  const lang = useLang();
   const [tab, setTab] = useState(()=>myTeam.conf==="West"?"west":"east");
   if(!bracket) return null;
 
