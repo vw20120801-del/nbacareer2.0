@@ -692,7 +692,7 @@ function SavesLobby({onLoad, onNew, lang, setLang}: any) {
 }
 
 // ════════════════ CREATE ════════════════
-function CreateScreen({onDone, onBack}: any) {
+function CreateScreen({onDone, onBack, lang, setLang}: any) {
   const [name, setName] = useState("");
   const [pos, setPos] = useState("PG");
   const [arc, setArc] = useState("");
