@@ -542,7 +542,16 @@
     // Trade UX
     "trade.ok_emoji": { zh: "\u{1F4E4} \u7533\u8BF7\u5DF2\u63D0\u4EA4\uFF0C\u7B49\u5F85\u56DE\u5E94\u3002", en: "\u{1F4E4} Request submitted, awaiting response." },
     // Career complete card extras
-    "retire.position_age": { zh: "{city} {team} \xB7 {pos} \xB7 {age} \u5C81", en: "{city} {team} \xB7 {pos} \xB7 Age {age}" }
+    "retire.position_age": { zh: "{city} {team} \xB7 {pos} \xB7 {age} \u5C81", en: "{city} {team} \xB7 {pos} \xB7 Age {age}" },
+    // Simulation event banners (shown in narrative box after sim batches)
+    "sim.recovered_from": { zh: "\u{1F7E2} \u5DF2\u4ECE\u300C{name}\u300D\u4E2D\u6062\u590D\uFF01", en: "\u{1F7E2} Recovered from {name}!" },
+    "sim.recovered_short": { zh: "\u{1F7E2} \u5DF2\u6062\u590D\uFF01", en: "\u{1F7E2} Back to full health!" },
+    "sim.injured": { zh: "\u{1F534} \u53D7\u4F24\uFF01{name}\uFF0C\u9884\u8BA1\u7F3A\u5E2D {n} \u5929", en: "\u{1F534} Injured! {name} \u2014 out approximately {n} days" },
+    "sim.injured_short": { zh: "\u{1F534} \u53D7\u4F24\uFF01{name}", en: "\u{1F534} Injured! {name}" },
+    "sim.completed_n_games": { zh: "\u5DF2\u5B8C\u6210 {n} \u573A\u6A21\u62DF\u3002", en: "Simulated {n} games." },
+    "sim.rested_this_game": { zh: "\u672C\u573A\u7403\u5458\u4F11\u6218\u3002", en: "Player rested this game." },
+    // Calendar bottom-row buttons (sim batches)
+    "cal.simming": { zh: "\u6A21\u62DF\u4E2D...", en: "Simming..." }
   };
   var NAME_FIRST_EN = ["LeBron", "Kevin", "Stephen", "James", "Cameron", "Chris", "Derrick", "Anthony", "Paul", "Luka", "Jamal", "Marcus", "Trae", "Giannis", "Nikola", "Joel", "Damian", "Jason", "Damien", "Darren", "Brandon", "Sean", "Cedric", "Terry", "John", "Miles", "Jarrett", "Tristan", "Blake", "Zach", "Klay", "Javale", "Allen", "DeAndre", "Oscar", "Vincent", "Nate", "Reggie", "Oliver", "Kenny", "Tanner", "Shane", "Tyson", "Jude", "Alvin", "Brad", "Trevor", "Iman", "Tyler", "Brian"];
   var NAME_LAST_EN = ["James", "Durant", "Curry", "Harden", "Leonard", "Paul", "Rose", "Davis", "Iverson", "Duncan", "Nowitzki", "Nash", "McGrady", "Pierce", "Gasol", "Anthony", "Howard", "Boozer", "Roy", "Aldridge", "Johnson", "Smith", "Brown", "Williams", "Miller", "Moore", "Martin", "Thompson", "Anderson", "Thomas", "Jackson", "Robinson", "Clark", "Lewis", "Walker", "Hall", "Allen", "Young", "Carter", "Cole", "Foster", "Mitchell", "Adams", "Hayward", "Irving", "Adebayo", "Nelson", "Malkin", "O'Sullivan", "Baker"];
@@ -2100,7 +2109,7 @@
           curInj = { ...curInj, daysLeft: (curInj.daysLeft || 0) - elapsedDays };
           if (curInj.daysLeft <= 0) {
             newInjLog.push({ name: curInj.name, date: g.date, type: "recovered" });
-            injEvent = "\u{1F7E2} \u5DF2\u4ECE\u300C" + curInj.name + "\u300D\u4E2D\u6062\u590D\uFF01";
+            injEvent = t("sim.recovered_from", lang2, { name: tx(curInj.name, lang2) });
             curInj = null;
           }
         } else {
@@ -2108,7 +2117,7 @@
           if (ni) {
             curInj = ni;
             newInjLog.push({ name: ni.name, date: g.date, days: ni.daysLeft, type: "injured" });
-            injEvent = "\u{1F534} \u53D7\u4F24\uFF01" + ni.name + "\uFF0C\u9884\u8BA1\u7F3A\u5E2D " + ni.daysLeft + " \u5929";
+            injEvent = t("sim.injured", lang2, { name: tx(ni.name, lang2), n: ni.daysLeft });
           }
         }
         const res = simOneGame(curInj, isResting);
@@ -2145,7 +2154,7 @@
           const txt = await aiCall("\u4F60\u662FNBA\u89E3\u8BF4\u5458\u3002\u4E2D\u65873\u53E5\u8BDD\uFF1A" + player.name + "\uFF08" + team.city + team.name + "\uFF0C" + player.position + "\uFF0C" + player.archetype + "\uFF09\u5BF9\u9635" + oppT.city + oppT.name + "\u3002" + lastG.stats.pts + "\u5206 " + lastG.stats.ast + "\u52A9 " + lastG.stats.reb + "\u7BEE\uFF0C" + (lastG.status === "won" ? "\u80DC" : "\u8D1F", lang2) + "\u3002" + (lastG.stats.injured ? "\u5E26\u4F24\u51FA\u6218\u3002" : "") + "\u4F53\u73B0" + player.archetype + "\u98CE\u683C\u3002\u53EA\u8F93\u51FA\u89E3\u8BF4\u8BCD\u3002", lang2);
           setNarrative((injEvent ? injEvent + "\n\n" : "") + (txt || "\u7CBE\u5F69\u6BD4\u8D5B\uFF01"));
         } else {
-          setNarrative((injEvent || "") + (injEvent ? "\n\n" : "") + (games.length > 1 ? "\u5DF2\u5B8C\u6210 " + games.length + " \u573A\u6A21\u62DF\u3002" : "\u672C\u573A\u7403\u5458\u4F11\u6218\u3002"));
+          setNarrative((injEvent || "") + (injEvent ? "\n\n" : "") + (games.length > 1 ? t("sim.completed_n_games", lang2, { n: games.length }) : t("sim.rested_this_game", lang2)));
         }
       }
       setSimming(false);
@@ -2174,7 +2183,7 @@
               curInj = { ...curInj, daysLeft: (curInj.daysLeft || 0) - 2 };
               if (curInj.daysLeft <= 0) {
                 newInjLog.push({ name: curInj.name, date: nextG.date, type: "recovered" });
-                injEvent = "\u{1F7E2} \u5DF2\u6062\u590D\uFF01";
+                injEvent = t("sim.recovered_short", lang2);
                 curInj = null;
               }
             } else if (isMyMatch) {
@@ -2182,7 +2191,7 @@
               if (ni) {
                 curInj = ni;
                 newInjLog.push({ name: ni.name, date: nextG.date, days: ni.daysLeft, type: "injured" });
-                injEvent = "\u{1F534} \u53D7\u4F24\uFF01" + ni.name;
+                injEvent = t("sim.injured_short", lang2, { name: tx(ni.name, lang2) });
               }
             }
             const res = isMyMatch ? simOneGame(curInj, false) : { pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, win: Math.random() > 0.45, injured: false, rested: false };
@@ -2218,7 +2227,7 @@
             curInj = { ...curInj, daysLeft: (curInj.daysLeft || 0) - 2 };
             if (curInj.daysLeft <= 0) {
               newInjLog.push({ name: curInj.name, date: nextG.date, type: "recovered" });
-              injEvent = "\u{1F7E2} \u5DF2\u6062\u590D\uFF01";
+              injEvent = t("sim.recovered_short", lang2);
               curInj = null;
             }
           } else if (isMyMatch) {
@@ -2226,7 +2235,7 @@
             if (ni) {
               curInj = ni;
               newInjLog.push({ name: ni.name, date: nextG.date, days: ni.daysLeft, type: "injured" });
-              injEvent = "\u{1F534} \u53D7\u4F24\uFF01" + ni.name;
+              injEvent = t("sim.injured_short", lang2, { name: tx(ni.name, lang2) });
             }
           }
           const res = isMyMatch ? simOneGame(curInj, false) : { pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, win: Math.random() > 0.45, injured: false, rested: false };
@@ -2606,7 +2615,7 @@
         disabled: simming,
         style: { flex: 1, padding: "11px 0", fontSize: 12, fontWeight: 700, background: simming ? "#222" : team.color, border: "2px solid " + (simming ? "#333" : ac), color: simming ? "#444" : ac, borderRadius: 9, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" }
       },
-      simming ? "\u6A21\u62DF\u4E2D..." : "\u25B6\u25B6 \u672C\u6708"
+      simming ? t("cal.simming", lang2) : t("cal.sim_month", lang2)
     ), regularGames.filter((g) => g.status === "upcoming").length > 0 && /* @__PURE__ */ react_shim_default.createElement(
       "button",
       {
@@ -2617,7 +2626,7 @@
         disabled: simming,
         style: { flex: 1, padding: "11px 0", fontSize: 12, fontWeight: 700, background: "transparent", border: "1px solid #ffffff22", color: "#666", borderRadius: 9, cursor: simming ? "not-allowed" : "pointer", fontFamily: "sans-serif" }
       },
-      "\u23E9 \u5269\u4F59\u5E38\u89C4\u8D5B"
+      t("cal.sim_rest", lang2)
     )), narrative && /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginTop: 12, background: "#0f1923", borderRadius: 12, padding: 14, borderLeft: "4px solid " + ac } }, narrativeCtx && /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 8 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#aaa" } }, "vs ", narrativeCtx.opp, " ", fmtDate(narrativeCtx.date)), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: narrativeCtx.status === "won" ? "#00ff88" : "#ff5555" } }, narrativeCtx.stats?.rested ? "\u4F11\u6218" : narrativeCtx.status === "won" ? "W \xB7 " + narrativeCtx.stats?.pts + "\u5206" : "L \xB7 " + narrativeCtx.stats?.pts + "\u5206")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 13, color: "#ddd", lineHeight: 1.7, whiteSpace: "pre-line" } }, narrative)), played.length > 0 && /* @__PURE__ */ react_shim_default.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#555", letterSpacing: 1, marginBottom: 6 } }, t("cal.recent", lang2)), played.slice(-4).reverse().map((g, i) => /* @__PURE__ */ react_shim_default.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: "#111827", borderRadius: 8, marginBottom: 5, border: "1px solid " + (g.status === "won" ? "#00ff8818" : "#ff44441a") } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: g.status === "won" ? "#00ff88" : "#ff5555", minWidth: 16 } }, g.status === "won" ? "W" : "L"), /* @__PURE__ */ react_shim_default.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#ccc" } }, "vs ", g.opp, g.stats?.rested && /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#88aaff", fontSize: 10 } }, " ", t("cal.rested_marker", lang2)), g.stats?.injured && /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#ff8888", fontSize: 10 } }, " \u{1F915}")), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#555" } }, fmtDate(g.date), " ", g.home ? "\u4E3B\u573A" : "\u5BA2\u573A")), g.stats && !g.stats.rested && /* @__PURE__ */ react_shim_default.createElement("div", { style: { display: "flex", gap: 7, fontSize: 12 } }, /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: ac } }, g.stats.pts, "\u5206"), /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#666" } }, g.stats.ast, "\u52A9"), /* @__PURE__ */ react_shim_default.createElement("span", { style: { color: "#666" } }, g.stats.reb, "\u7BEE")))))), view === "stats" && /* @__PURE__ */ react_shim_default.createElement("div", { style: { padding: 14 } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, marginBottom: 12, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 4 } }, t("stats.overall", lang2)), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 50, fontWeight: 900, color: ac, lineHeight: 1 } }, player.overall), /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 12, color: "#555" } }, "OVR \xB7 ", player.archetype, " \xB7 S", season)), /* @__PURE__ */ react_shim_default.createElement("div", { style: { background: "#111827", borderRadius: 12, padding: 16, marginBottom: 12, border: "1px solid #ffffff0d" } }, /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 11, color: "#888", letterSpacing: 1, marginBottom: 12 } }, t("stats.attr_and_ceiling", lang2)), Object.entries(player.stats).map(([k, v]) => {
       const eff = injury && injury.affectedStats.includes(k) ? Math.max(28, Math.round(v * 0.68)) : v;
       return /* @__PURE__ */ react_shim_default.createElement("div", { key: k }, /* @__PURE__ */ react_shim_default.createElement(StatBar, { label: tx(STAT_LABELS[k], lang2), value: eff, ceiling: player.ceiling[k], max: 99, color: injury && injury.affectedStats.includes(k) ? "#ff6b6b" : ac }), injury && injury.affectedStats.includes(k) && /* @__PURE__ */ react_shim_default.createElement("div", { style: { fontSize: 10, color: "#ff8888", marginTop: -6, marginBottom: 6 } }, "\u{1F915} ", t("stats.injury_orig", lang2, { v })));
