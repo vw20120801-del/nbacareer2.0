@@ -1397,8 +1397,9 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
   async function simulateUpTo(targetId) {
     if(simming) return;
     setSimming(true); setNarrative(""); setNarrativeCtx(null);
+    try {
     const games = regularGames.filter(g=>g.status==="upcoming" && g.id<=targetId);
-    if(!games.length) { setSimming(false); return; }
+    if(!games.length) { return; }
     let newReg = [...regularGames];
     let curInj = injury;
     let curRest = resting;
@@ -1418,12 +1419,12 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
         curInj = {...curInj, daysLeft: (curInj.daysLeft || 0) - elapsedDays};
         if(curInj.daysLeft <= 0) {
           newInjLog.push({name:curInj.name,date:g.date,type:"recovered"});
-          injEvent = "🟢 已从「"+curInj.name+"」中恢复！";
+          injEvent = t("sim.recovered_from", lang, {name: tx(curInj.name, lang)});
           curInj = null;
         }
       } else {
         const ni = checkNewInjury();
-        if(ni) { curInj=ni; newInjLog.push({name:ni.name,date:g.date,days:ni.daysLeft,type:"injured"}); injEvent="🔴 受伤！"+ni.name+"，预计缺席 "+ni.daysLeft+" 天"; }
+        if(ni) { curInj=ni; newInjLog.push({name:ni.name,date:g.date,days:ni.daysLeft,type:"injured"}); injEvent=t("sim.injured", lang, {name: tx(ni.name, lang), n: ni.daysLeft}); }
       }
       const res = simOneGame(curInj, isResting);
       newReg = newReg.map(s=>s.id===g.id?{...s,status:res.win?"won":"lost",stats:res}:s);
@@ -1453,10 +1454,11 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
         const txt = await aiCall("你是NBA解说员。中文3句话："+player.name+"（"+team.city+team.name+"，"+player.position+"，"+player.archetype+"）对阵"+oppT.city+oppT.name+"。"+lastG.stats.pts+"分 "+lastG.stats.ast+"助 "+lastG.stats.reb+"篮，"+(lastG.status==="won"?"胜":"负")+"。"+(lastG.stats.injured?"带伤出战。":"")+"体现"+player.archetype+"风格。只输出解说词。", lang);
         setNarrative((injEvent?injEvent+"\n\n":"")+(txt||"精彩比赛！"));
       } else {
-        setNarrative((injEvent||"")+(injEvent?"\n\n":"")+(games.length>1?"已完成 "+games.length+" 场模拟。":"本场球员休战。"));
+        setNarrative((injEvent||"")+(injEvent?"\n\n":"")+(games.length>1?t("sim.completed_n_games", lang, {n: games.length}):t("sim.rested_this_game", lang)));
       }
     }
-    setSimming(false);
+    } catch(e) { console.error("simulateUpTo error:", e); }
+    finally { setSimming(false); }
   }
 
   async function simPlayoffGame(series) {
@@ -1481,8 +1483,8 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
           const isMyMatch = s.teamA.abbr===team.abbr||s.teamB.abbr===team.abbr;
           const imTeamA = s.teamA.abbr===team.abbr;
           let curInj = injury; let newInjLog=[...injuryLog]; let injEvent=null;
-          if(curInj){curInj={...curInj,daysLeft:(curInj.daysLeft||0)-2};if(curInj.daysLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent="🟢 已恢复！";curInj=null;}}
-          else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,days:ni.daysLeft,type:"injured"});injEvent="🔴 受伤！"+ni.name;}}
+          if(curInj){curInj={...curInj,daysLeft:(curInj.daysLeft||0)-2};if(curInj.daysLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent=t("sim.recovered_short", lang);curInj=null;}}
+          else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,days:ni.daysLeft,type:"injured"});injEvent=t("sim.injured_short", lang, {name: tx(ni.name, lang)});}}
           const res = isMyMatch ? simOneGame(curInj,false) : {pts:0,ast:0,reb:0,stl:0,blk:0,win:Math.random()>0.45,injured:false,rested:false};
           const aWon = imTeamA ? res.win : !res.win;
           if(aWon) s.winsA++; else s.winsB++;
@@ -1502,8 +1504,8 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
         const isMyMatch = s.teamA.abbr===team.abbr||s.teamB.abbr===team.abbr;
         const imTeamA = s.teamA.abbr===team.abbr;
         let curInj=injury; let newInjLog=[...injuryLog]; let injEvent=null;
-        if(curInj){curInj={...curInj,daysLeft:(curInj.daysLeft||0)-2};if(curInj.daysLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent="🟢 已恢复！";curInj=null;}}
-        else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,days:ni.daysLeft,type:"injured"});injEvent="🔴 受伤！"+ni.name;}}
+        if(curInj){curInj={...curInj,daysLeft:(curInj.daysLeft||0)-2};if(curInj.daysLeft<=0){newInjLog.push({name:curInj.name,date:nextG.date,type:"recovered"});injEvent=t("sim.recovered_short", lang);curInj=null;}}
+        else if(isMyMatch){const ni=checkNewInjury();if(ni){curInj=ni;newInjLog.push({name:ni.name,date:nextG.date,days:ni.daysLeft,type:"injured"});injEvent=t("sim.injured_short", lang, {name: tx(ni.name, lang)});}}
         const res = isMyMatch ? simOneGame(curInj,false) : {pts:0,ast:0,reb:0,stl:0,blk:0,win:Math.random()>0.45,injured:false,rested:false};
         const aWon = imTeamA ? res.win : !res.win;
         if(aWon) s.winsA++; else s.winsB++;
@@ -2661,7 +2663,7 @@ function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
               {label:t("awards.best_coach", lang),icon:"📋",value:seasonAwards.bestCoach},
             ].map(a=>{
               const isMe = a.value===player.name;
-              const isMyTeam = a.label==="总冠军球队" && seasonAwards.iChampion;
+              const isMyTeam = a.icon==="🏅" && seasonAwards.iChampion;  // icon is locale-independent
               return (
                 <div key={a.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid #ffffff08"}}>
                   <div style={{fontSize:12,color:"#888"}}>{a.icon} {a.label}</div>
