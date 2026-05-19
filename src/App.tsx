@@ -1,4 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { Lang, LangContext, detectInitialLang, saveLang, useLang, L, t, tx,
+         teamCity, teamName, teamFull, TEAM_LOCAL, COACHES_BILINGUAL,
+         NAME_FIRST_EN, NAME_LAST_EN, TEAMMATE_FIRST_EN, TEAMMATE_LAST_EN,
+         COMMENTARY_EN, NEGOTIATE_ACCEPT_EN, NEGOTIATE_REJECT_EN } from "./i18n";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const POSITIONS = ["PG","SG","SF","PF","C"];
@@ -118,7 +122,8 @@ function getMaxSalary(season: number): number {
   return Math.round(SALARY_CAP * 0.25);
 }
 // Reject lines used during negotiation
-const NEGOTIATE_REJECT = [
+// Reject/accept lines used during negotiation — picked per current language at runtime.
+const NEGOTIATE_REJECT_ZH = [
   "球队管理层摇头：「这超出了我们的预算」。",
   "GM 直接拒绝：「我们没有那么多薪资空间」。",
   "老板冷冷地说：「这个数字不可能」。",
@@ -126,16 +131,18 @@ const NEGOTIATE_REJECT = [
   "对方报价员沉默良久：「请你再考虑一下我们原本的报价」。",
   "GM 拒绝后撂下一句：「我们会去看别的选项」。",
 ];
-const NEGOTIATE_ACCEPT = [
+const NEGOTIATE_ACCEPT_ZH = [
   "球队管理层经过短暂讨论后点头同意。",
   "GM 笑着说：「成交，期待你为我们效力」。",
   "老板亲自打来电话表达了欢迎。",
   "经纪人确认：合同条款已敲定。",
 ];
-function negotiate(currentSalary: number, increase: number, isHome: boolean, ovr: number, maxAllowed: number): { accepted: boolean; line: string; newSalary: number } {
+function negotiate(currentSalary: number, increase: number, isHome: boolean, ovr: number, maxAllowed: number, lang: Lang = "zh"): { accepted: boolean; line: string; newSalary: number } {
+  const ACCEPT = lang === "en" ? NEGOTIATE_ACCEPT_EN : NEGOTIATE_ACCEPT_ZH;
+  const REJECT = lang === "en" ? NEGOTIATE_REJECT_EN : NEGOTIATE_REJECT_ZH;
   const newSalary = +(currentSalary + increase).toFixed(1);
   if(newSalary > maxAllowed) {
-    return { accepted: false, line: "超过顶薪上限 $"+maxAllowed+"M，球队无法接受。", newSalary: currentSalary };
+    return { accepted: false, line: t("neg.over_max", lang, {max: maxAllowed}), newSalary: currentSalary };
   }
   const pct = increase / Math.max(1, currentSalary);
   let acceptP = 0.95;
@@ -149,7 +156,7 @@ function negotiate(currentSalary: number, increase: number, isHome: boolean, ovr
   const accepted = Math.random() < acceptP;
   return {
     accepted,
-    line: accepted ? NEGOTIATE_ACCEPT[Math.floor(Math.random()*NEGOTIATE_ACCEPT.length)] : NEGOTIATE_REJECT[Math.floor(Math.random()*NEGOTIATE_REJECT.length)],
+    line: accepted ? ACCEPT[Math.floor(Math.random()*ACCEPT.length)] : REJECT[Math.floor(Math.random()*REJECT.length)],
     newSalary: accepted ? newSalary : currentSalary,
   };
 }
@@ -175,7 +182,7 @@ function writeSaves(s: any): boolean {
     const isQuota = e && (e.name === "QuotaExceededError" || (e.code === 22));
     if(isQuota && !(window as any).__nbaQuotaWarned) {
       (window as any).__nbaQuotaWarned = true;
-      alert("⚠️ 存档空间不足！\n\n用右下角的 ⬇备份 按钮导出现有存档到本地文件，\n然后删掉几个旧存档释放空间，再继续游戏。");
+      alert(t("save.quota_warn", (typeof window!=="undefined" && (window as any).__nbaLang) || "zh"));
     }
     return false;
   }
@@ -350,18 +357,21 @@ function fmtMonthLabel(y, m) { const mons=["1月","2月","3月","4月","5月","6
 // ── Content Pools (added by audit-fix v2) ────────────────────────────────────
 const NAME_FIRST = ["勒布朗","凯文","斯蒂芬","詹姆斯","卡梅隆","克里斯","德里克","安东尼","保罗","卢卡","贾马尔","马库斯","特雷","扬尼斯","尼古拉","乔尔","达米安","贾森","戴米恩","达伦","布兰登","肖恩","塞德里克","特里","约翰","迈尔斯","贾莱特","特里斯坦","布雷克","扎克","克莱","贾韦尔","艾伦","德安东尼","奥斯卡","文森特","内特","雷吉","奥利弗","肯尼","坦纳","谢恩","塔伊森","贾德","阿尔文","布拉德","特雷弗","罗恩","伊曼","泰勒"];
 const NAME_LAST = ["詹姆斯","杜兰特","库里","哈登","莱昂纳德","保罗","罗斯","戴维斯","艾弗森","邓肯","诺维茨基","纳什","麦迪","皮尔斯","加索尔","安东尼","霍华德","布泽尔","罗伊","阿尔德里奇","约翰逊","史密斯","布朗","威廉斯","米勒","摩尔","马丁","汤普森","安德森","托马斯","杰克逊","罗宾逊","克拉克","刘易斯","沃克","霍尔","艾伦","扬","卡特","考尔","福斯特","米切尔","亚当斯","海伍德","欧文","阿德","纳尔逊","马尔金","奥沙利文","贝克"];
-function buildNamePool() {
+function buildNamePool(lang: Lang = "zh") {
+  const first = lang === "en" ? NAME_FIRST_EN : NAME_FIRST;
+  const last  = lang === "en" ? NAME_LAST_EN  : NAME_LAST;
+  const sep   = lang === "en" ? " " : "·";
   const out: string[] = [];
-  for(let i=0; i<NAME_FIRST.length; i++)
-    for(let j=0; j<NAME_LAST.length; j++)
-      out.push(NAME_FIRST[i] + "·" + NAME_LAST[j]);
+  for(let i=0; i<first.length; i++)
+    for(let j=0; j<last.length; j++)
+      out.push(first[i] + sep + last[j]);
   for(let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     const t = out[i]; out[i] = out[j]; out[j] = t;
   }
   return out;
 }
-function fmtPlayer(p: any) { return p.name + " (" + p.teamAbbr + ")"; }
+function fmtPlayer(p: any) { return p.name + " (" + p.teamAbbr + ")"; }  // teamAbbr is locale-agnostic (e.g. LAL)
 function pickRandom(arr: any[]) { return arr[Math.floor(Math.random() * arr.length)]; }
 function fillTemplate(tpl: string, vars: any) {
   return tpl.replace(/\{(\w+)\}/g, (m, k) => vars[k] !== undefined ? String(vars[k]) : m);
@@ -558,20 +568,20 @@ const COMMENTARY: any = {
 };
 // ── End Content Pools ────────────────────────────────────────────────────────
 
-async function aiCall(prompt: string): Promise<string> {
-  // The old impl fetched api.anthropic.com but had no API key + CORS blocked it.
-  // Now we synthesize commentary from local COMMENTARY pools.
-  return new Promise(resolve => setTimeout(() => resolve(localCommentary(prompt)), 200));
+async function aiCall(prompt: string, lang: Lang = "zh"): Promise<string> {
+  // No external API — synthesize from local COMMENTARY pools (zh or en).
+  return new Promise(resolve => setTimeout(() => resolve(localCommentary(prompt, lang)), 200));
 }
-function localCommentary(prompt: string): string {
+function localCommentary(prompt: string, lang: Lang = "zh"): string {
   const p = prompt || "";
-  if(p.includes("选秀")) return pickRandom(COMMENTARY.draft);
+  const COMM: any = lang === "en" ? COMMENTARY_EN : COMMENTARY;
+  if(p.includes("选秀") || p.toLowerCase().includes("draft")) return pickRandom(COMM.draft);
   if(p.includes("关系") || p.includes("主教练") || p.includes("总经理") || p.includes("老板") || p.includes("更衣室")) {
-    if(p.includes("融洽")) return pickRandom(COMMENTARY.relGood);
-    if(p.includes("紧张")) return pickRandom(COMMENTARY.relBad);
-    return pickRandom(COMMENTARY.relNeutral);
+    if(p.includes("融洽")) return pickRandom(COMM.relGood);
+    if(p.includes("紧张")) return pickRandom(COMM.relBad);
+    return pickRandom(COMM.relNeutral);
   }
-  if(p.includes("申请交易")) return pickRandom(COMMENTARY.trade);
+  if(p.includes("申请交易")) return pickRandom(COMM.trade);
   const pts = (p.match(/(\d+)分/) || [0, 0])[1];
   const ast = (p.match(/(\d+)助/) || [0, 0])[1];
   const reb = (p.match(/(\d+)篮/) || [0, 0])[1];
@@ -579,14 +589,14 @@ function localCommentary(prompt: string): string {
   const isWin = p.includes("胜");
   const isInjured = p.includes("带伤");
   const isPoff = p.includes("季后赛");
-  if(isPoff) return fillTemplate(pickRandom(isWin ? COMMENTARY.poffWin : COMMENTARY.poffLoss), vars);
+  if(isPoff) return fillTemplate(pickRandom(isWin ? COMM.poffWin : COMM.poffLoss), vars);
   let pool: string[] | null = null;
-  if(p.includes("射手") || p.includes("投篮")) pool = isWin ? COMMENTARY.winShooter : COMMENTARY.lossShooter;
-  else if(p.includes("控卫") || p.includes("组织")) pool = isWin ? COMMENTARY.winPG : COMMENTARY.lossPG;
-  else if(p.includes("防守") || p.includes("双向")) pool = isWin ? COMMENTARY.winDefender : COMMENTARY.lossDefender;
-  if(pool) return (isInjured ? pickRandom(COMMENTARY.injuredPrefix) : "") + fillTemplate(pickRandom(pool), vars);
-  const out = fillTemplate(pickRandom(isWin ? COMMENTARY.winGeneric : COMMENTARY.lossGeneric), vars);
-  return (isInjured ? pickRandom(COMMENTARY.injuredPrefix) : "") + out;
+  if(p.includes("射手") || p.includes("投篮")) pool = isWin ? COMM.winShooter : COMM.lossShooter;
+  else if(p.includes("控卫") || p.includes("组织")) pool = isWin ? COMM.winPG : COMM.lossPG;
+  else if(p.includes("防守") || p.includes("双向")) pool = isWin ? COMM.winDefender : COMM.lossDefender;
+  if(pool) return (isInjured ? pickRandom(COMM.injuredPrefix) : "") + fillTemplate(pickRandom(pool), vars);
+  const out = fillTemplate(pickRandom(isWin ? COMM.winGeneric : COMM.lossGeneric), vars);
+  return (isInjured ? pickRandom(COMM.injuredPrefix) : "") + out;
 }
 
 // ── StatBar ───────────────────────────────────────────────────────────────────
@@ -610,24 +620,36 @@ function StatBar({label, value, ceiling, max=99, color="#FDB927"}) {
   );
 }
 
+// ── i18n toggle button (中 / EN) — used in every screen header ──────────────
+function LangToggle({ lang, setLang }: any) {
+  return (
+    <button onClick={() => setLang(lang === "zh" ? "en" : "zh")}
+      title={lang === "zh" ? "Switch to English" : "切换为中文"}
+      style={{padding:"5px 10px",background:"rgba(0,0,0,0.3)",border:"1px solid #ffffff33",borderRadius:8,color:"#fff",fontSize:12,cursor:"pointer",fontFamily:"sans-serif",minWidth:42}}>
+      {lang === "zh" ? "中/EN" : "EN/中"}
+    </button>
+  );
+}
+
 // ════════════════ SAVES LOBBY ════════════════
-function SavesLobby({onLoad, onNew}) {
+function SavesLobby({onLoad, onNew, lang, setLang}: any) {
   const [saves, setSaves] = useState(loadSaves);
   const [del, setDel] = useState(null);
   function doDelete(id) { const s={...saves}; delete s[id]; writeSaves(s); setSaves(s); setDel(null); }
   const list = Object.values(saves).sort((a,b)=>b.savedAt-a.savedAt);
   return (
     <div style={{minHeight:"100vh",background:"#0a0a0f",color:"#fff",fontFamily:"sans-serif"}}>
-      <div style={{background:"linear-gradient(180deg,#1a1a2e,#0a0a0f)",padding:"48px 20px 28px",textAlign:"center"}}>
-        <div style={{fontSize:11,color:"#f9a01b",letterSpacing:5,marginBottom:10}}>NBA CAREER MODE</div>
-        <div style={{fontSize:38,fontWeight:900,letterSpacing:3}}>MY CAREER</div>
+      <div style={{background:"linear-gradient(180deg,#1a1a2e,#0a0a0f)",padding:"48px 20px 28px",textAlign:"center",position:"relative"}}>
+        <div style={{position:"absolute",top:14,right:14}}><LangToggle lang={lang} setLang={setLang}/></div>
+        <div style={{fontSize:11,color:"#f9a01b",letterSpacing:5,marginBottom:10}}>{t("app.subtitle", lang)}</div>
+        <div style={{fontSize:38,fontWeight:900,letterSpacing:3}}>{t("app.title", lang)}</div>
       </div>
       <div style={{padding:20,maxWidth:460,margin:"0 auto"}}>
         <button onClick={onNew} style={{width:"100%",padding:"18px 0",fontSize:17,fontWeight:700,background:"linear-gradient(135deg,#f9a01b,#ffd700)",border:"none",borderRadius:14,color:"#000",cursor:"pointer",fontFamily:"sans-serif",marginBottom:24}}>+ 新建生涯</button>
         {list.length===0 ? (
           <div style={{textAlign:"center",padding:"40px 0",color:"#444"}}>
             <div style={{fontSize:32,marginBottom:12}}>🏀</div>
-            <div>还没有存档，创建你的第一个生涯</div>
+            <div>{t("app.no_saves_emoji_caption", lang)}</div>
           </div>
         ) : list.map(sv => {
           const tm = ALL_TEAMS.find(t=>t.abbr===sv.teamAbbr)||ALL_TEAMS[0];
@@ -639,25 +661,25 @@ function SavesLobby({onLoad, onNew}) {
               </div>
               <div style={{padding:"12px 14px"}}>
                 <div style={{display:"flex",gap:12,fontSize:13,marginBottom:8}}>
-                  <span style={{color:"#888"}}>{sv.position} · {sv.archetype}</span>
+                  <span style={{color:"#888"}}>{sv.position} · {tx(sv.archetype, lang)}</span>
                   <span style={{color:"#f9a01b"}}>OVR {sv.overall}</span>
                 </div>
                 <div style={{display:"flex",gap:12,fontSize:12,color:"#666",marginBottom:12}}>
-                  <span>第{sv.season||1}赛季</span>
-                  {sv.age && <span>{sv.age}岁</span>}
-                  <span>{sv.wins}胜{sv.losses}负</span>
+                  <span>{t("app.season", lang, {n: sv.season||1})}</span>
+                  {sv.age && <span>{t("app.years_old", lang, {n: sv.age})}</span>}
+                  <span>{t("app.wins_losses", lang, {w: sv.wins, l: sv.losses})}</span>
                   <span>${sv.salary||2.5}M/年</span>
-                  {sv.injured && <span style={{color:"#ff6b6b"}}>🤕伤病</span>}
+                  {sv.injured && <span style={{color:"#ff6b6b"}}>{t("app.injured_label", lang)}</span>}
                 </div>
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>onLoad(sv.id)} style={{flex:1,padding:"10px 0",background:tm.color,border:"none",borderRadius:10,color:tm.accent,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"sans-serif"}}>继续游戏</button>
+                  <button onClick={()=>onLoad(sv.id)} style={{flex:1,padding:"10px 0",background:tm.color,border:"none",borderRadius:10,color:tm.accent,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"sans-serif"}}>{t("app.continue", lang)}</button>
                   {del===sv.id ? (
                     <div style={{display:"flex",gap:6}}>
-                      <button onClick={()=>doDelete(sv.id)} style={{padding:"10px 12px",background:"#ff4444",border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>确认删除</button>
-                      <button onClick={()=>setDel(null)} style={{padding:"10px 12px",background:"#333",border:"none",borderRadius:10,color:"#aaa",fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>取消</button>
+                      <button onClick={()=>doDelete(sv.id)} style={{padding:"10px 12px",background:"#ff4444",border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>{t("app.confirm_delete", lang)}</button>
+                      <button onClick={()=>setDel(null)} style={{padding:"10px 12px",background:"#333",border:"none",borderRadius:10,color:"#aaa",fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>{t("app.cancel", lang)}</button>
                     </div>
                   ) : (
-                    <button onClick={()=>setDel(sv.id)} style={{padding:"10px 12px",background:"#1a1a2e",border:"1px solid #ffffff11",borderRadius:10,color:"#555",fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>删除</button>
+                    <button onClick={()=>setDel(sv.id)} style={{padding:"10px 12px",background:"#1a1a2e",border:"1px solid #ffffff11",borderRadius:10,color:"#555",fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>{t("app.delete", lang)}</button>
                   )}
                 </div>
               </div>
@@ -688,7 +710,10 @@ function CreateScreen({onDone, onBack}: any) {
 
   function rerollPhysicals() { setPhysicals(generatePhysicals(pos)); }
   function randomizeName() {
-    const pool = buildNamePool();
+    // i18n: pick from English pool when EN is active
+    const pool = lang === "en"
+      ? NAME_FIRST_EN.flatMap(f => NAME_LAST_EN.map(l => f + " " + l))
+      : buildNamePool();
     setName(pool[Math.floor(Math.random() * pool.length)]);
   }
   function setHeight(v: number) {
@@ -712,24 +737,25 @@ function CreateScreen({onDone, onBack}: any) {
   return (
     <div style={{minHeight:"100vh",background:"#0a0a0f",color:"#fff",fontFamily:"sans-serif"}}>
       <div style={{background:"linear-gradient(180deg,#1a1a2e,#0a0a0f)",padding:"32px 20px 20px",display:"flex",alignItems:"center",gap:12}}>
-        <button onClick={onBack} style={{background:"#ffffff11",border:"none",color:"#fff",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:"sans-serif",fontSize:13}}>返回</button>
-        <div>
+        <button onClick={onBack} style={{background:"#ffffff11",border:"none",color:"#fff",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:"sans-serif",fontSize:13}}>{t("app.back", lang)}</button>
+        <div style={{flex:1}}>
           <div style={{fontSize:11,color:"#f9a01b",letterSpacing:3}}>NEW CAREER</div>
-          <div style={{fontSize:24,fontWeight:900}}>创建球员</div>
+          <div style={{fontSize:24,fontWeight:900}}>{t("create.title", lang)}</div>
         </div>
+        <LangToggle lang={lang} setLang={setLang}/>
       </div>
       <div style={{padding:20,maxWidth:440,margin:"0 auto"}}>
         <div style={{marginBottom:18}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2}}>球员姓名</div>
+            <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2}}>{t("create.label_name", lang)}</div>
             <button type="button" onClick={randomizeName}
-              style={{fontSize:11,color:"#88aaff",background:"transparent",border:"1px solid #88aaff44",borderRadius:6,padding:"3px 10px",cursor:"pointer",fontFamily:"sans-serif"}}>🎲 随机</button>
+              style={{fontSize:11,color:"#88aaff",background:"transparent",border:"1px solid #88aaff44",borderRadius:6,padding:"3px 10px",cursor:"pointer",fontFamily:"sans-serif"}}>{t("create.random_name", lang)}</button>
           </div>
-          <input value={name} onChange={e=>setName(e.target.value)} placeholder="输入你的名字或点击随机..."
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder={t("create.placeholder_name", lang)}
             style={{width:"100%",padding:"14px 16px",background:"#111827",border:"1px solid #ffffff22",borderRadius:10,color:"#fff",fontSize:16,boxSizing:"border-box",outline:"none",fontFamily:"sans-serif"}}/>
         </div>
         <div style={{marginBottom:18}}>
-          <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2,marginBottom:8}}>位置</div>
+          <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2,marginBottom:8}}>{t("create.label_position", lang)}</div>
           <div style={{display:"flex",gap:8}}>
             {POSITIONS.map(p => (
               <button key={p} onClick={()=>{setPos(p);setArc("");}}
@@ -739,55 +765,55 @@ function CreateScreen({onDone, onBack}: any) {
         </div>
         <div style={{marginBottom:28}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2}}>打法风格</div>
+            <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2}}>{t("create.label_archetype", lang)}</div>
             <button onClick={()=>{setCustom(!custom);setArc("");setCtext("");}}
-              style={{fontSize:11,color:custom?"#00ff88":"#888",background:"transparent",border:"1px solid "+(custom?"#00ff8844":"#ffffff22"),borderRadius:6,padding:"4px 10px",cursor:"pointer",fontFamily:"sans-serif"}}>{custom?"✓ 自定义":"✏ 自定义"}</button>
+              style={{fontSize:11,color:custom?"#00ff88":"#888",background:"transparent",border:"1px solid "+(custom?"#00ff8844":"#ffffff22"),borderRadius:6,padding:"4px 10px",cursor:"pointer",fontFamily:"sans-serif"}}>{custom?t("create.checked_custom", lang):t("create.edit_custom", lang)}</button>
           </div>
           {!custom ? (
             <div>
               {PRESET_ARCHETYPES[pos].map(a => (
                 <button key={a} onClick={()=>setArc(a)}
-                  style={{width:"100%",padding:"14px 16px",textAlign:"left",marginBottom:8,background:arc===a?"#1a2a1a":"#111827",border:"1px solid "+(arc===a?"#00ff88":"#ffffff22"),color:arc===a?"#00ff88":"#ccc",borderRadius:10,cursor:"pointer",fontSize:15,fontFamily:"sans-serif"}}>{a}</button>
+                  style={{width:"100%",padding:"14px 16px",textAlign:"left",marginBottom:8,background:arc===a?"#1a2a1a":"#111827",border:"1px solid "+(arc===a?"#00ff88":"#ffffff22"),color:arc===a?"#00ff88":"#ccc",borderRadius:10,cursor:"pointer",fontSize:15,fontFamily:"sans-serif"}}>{tx(a, lang)}</button>
               ))}
               <button onClick={()=>{setCustom(true);setArc("");}}
-                style={{width:"100%",padding:"14px 16px",textAlign:"left",marginBottom:8,background:"#0d1117",border:"1px dashed #ffffff33",color:"#888",borderRadius:10,cursor:"pointer",fontSize:14,fontFamily:"sans-serif"}}>✏ 其他（自定义输入）</button>
+                style={{width:"100%",padding:"14px 16px",textAlign:"left",marginBottom:8,background:"#0d1117",border:"1px dashed #ffffff33",color:"#888",borderRadius:10,cursor:"pointer",fontSize:14,fontFamily:"sans-serif"}}>{t("create.other_custom", lang)}</button>
             </div>
           ) : (
             <div>
-              <input value={ctext} onChange={e=>setCtext(e.target.value)} placeholder="例如：全能摇摆人、空间型大前锋..."
+              <input value={ctext} onChange={e=>setCtext(e.target.value)} placeholder={t("create.custom_placeholder", lang)}
                 style={{width:"100%",padding:"14px 16px",background:"#111827",border:"1px solid #00ff8844",borderRadius:10,color:"#00ff88",fontSize:15,boxSizing:"border-box",outline:"none",fontFamily:"sans-serif"}}/>
-              <div style={{fontSize:11,color:"#666",marginTop:6}}>AI会根据你的风格生成解说</div>
+              <div style={{fontSize:11,color:"#666",marginTop:6}}>{t("create.custom_ai_note", lang)}</div>
             </div>
           )}
         </div>
         {/* D2: age slider 18-26 */}
         <div style={{marginBottom:18}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2}}>入联年龄</div>
-            <div style={{fontSize:13,color:"#fff",fontWeight:700}}>{age} 岁</div>
+            <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2}}>{t("create.label_age", lang)}</div>
+            <div style={{fontSize:13,color:"#fff",fontWeight:700}}>{t("create.age_value", lang, {n: age})}</div>
           </div>
           <input type="range" min="18" max="26" value={age} onChange={e=>setAge(parseInt(e.target.value))}
             style={{width:"100%",accentColor:"#f9a01b"}}/>
           <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#555",marginTop:4}}>
-            <span>18 · 高潜力</span>
+            <span>{t("create.age_lo", lang)}</span>
             <span>22</span>
-            <span>26 · 已成熟</span>
+            <span>{t("create.age_hi", lang)}</span>
           </div>
           <div style={{fontSize:10,color:"#666",marginTop:6,lineHeight:1.5}}>
-            年龄越大初始属性越高，但生涯越短。32 岁后潜力开始衰退。
+            {t("create.age_note", lang)}
           </div>
         </div>
         {/* D12: physicals editor — sliders for height / wingspan / weight */}
         <div style={{marginBottom:18,background:"#0d1117",borderRadius:10,padding:14,border:"1px solid #ffffff11"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2}}>身体数据</div>
+            <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2}}>{t("create.label_physicals", lang)}</div>
             <button type="button" onClick={rerollPhysicals}
-              style={{fontSize:11,color:"#88aaff",background:"transparent",border:"1px solid #88aaff44",borderRadius:6,padding:"3px 10px",cursor:"pointer",fontFamily:"sans-serif"}}>🎲 随机重置</button>
+              style={{fontSize:11,color:"#88aaff",background:"transparent",border:"1px solid #88aaff44",borderRadius:6,padding:"3px 10px",cursor:"pointer",fontFamily:"sans-serif"}}>{t("create.reroll_physicals", lang)}</button>
           </div>
           {/* Height */}
           <div style={{marginBottom:10}}>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#aaa",marginBottom:4}}>
-              <span>身高</span><span style={{color:"#fff",fontWeight:700}}>{physicals.heightCm} cm</span>
+              <span>{t("create.height", lang)}</span><span style={{color:"#fff",fontWeight:700}}>{physicals.heightCm} cm</span>
             </div>
             <input type="range" min={heightRange[0]} max={heightRange[1]} value={physicals.heightCm}
               onChange={e=>setHeight(parseInt(e.target.value))}
@@ -799,7 +825,7 @@ function CreateScreen({onDone, onBack}: any) {
           {/* Wingspan delta */}
           <div style={{marginBottom:10}}>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#aaa",marginBottom:4}}>
-              <span>臂展</span>
+              <span>{t("create.wingspan", lang)}</span>
               <span><span style={{color:"#fff",fontWeight:700}}>{physicals.wingspanCm} cm</span> <span style={{color:physicals.wingDelta>=6?"#00ff88":physicals.wingDelta<0?"#ff8888":"#666",fontSize:10}}>({physicals.wingDelta>0?"+":""}{physicals.wingDelta})</span></span>
             </div>
             <input type="range" min={-3} max={12} value={physicals.wingDelta}
@@ -812,7 +838,7 @@ function CreateScreen({onDone, onBack}: any) {
           {/* Weight */}
           <div style={{marginBottom:6}}>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#aaa",marginBottom:4}}>
-              <span>体重</span><span style={{color:"#fff",fontWeight:700}}>{physicals.weightKg} kg</span>
+              <span>{t("create.weight", lang)}</span><span style={{color:"#fff",fontWeight:700}}>{physicals.weightKg} kg</span>
             </div>
             <input type="range" min={weightRange[0]} max={weightRange[1]} value={physicals.weightKg}
               onChange={e=>setWeight(parseInt(e.target.value))}
@@ -823,18 +849,18 @@ function CreateScreen({onDone, onBack}: any) {
           </div>
           {/* Traits readout */}
           <div style={{fontSize:10,color:"#666",marginTop:8,lineHeight:1.6}}>
-            静态天赋：{physicals.staticTraits.join("、")}<br/>
-            动态天赋：{physicals.dynamicTraits.join("、")}
-            <span style={{color:"#444"}}> (天赋随机生成，可重置)</span>
+            {t("create.static_traits", lang)}：{physicals.staticTraits.map((s: string) => tx(s, lang)).join(lang==="en"?", ":"、")}<br/>
+            {t("create.dynamic_traits", lang)}：{physicals.dynamicTraits.map((s: string) => tx(s, lang)).join(lang==="en"?", ":"、")}
+            <span style={{color:"#444"}}> {t("create.traits_note", lang)}</span>
           </div>
         </div>
         <div style={{background:"#0f1923",borderRadius:10,padding:14,marginBottom:20,border:"1px solid #f9a01b22"}}>
-          <div style={{fontSize:11,color:"#f9a01b",marginBottom:4}}>⚠ 潜力说明</div>
-          <div style={{fontSize:12,color:"#888",lineHeight:1.6}}>属性上限完全随机，身体天赋也各不相同。伤病可能永久限制成长空间。发挥打法特点才能最大化潜力。</div>
+          <div style={{fontSize:11,color:"#f9a01b",marginBottom:4}}>{t("create.potential_warn", lang)}</div>
+          <div style={{fontSize:12,color:"#888",lineHeight:1.6}}>{t("create.potential_body", lang)}</div>
         </div>
         <button onClick={submit} disabled={!name.trim()||!finalArc.trim()}
           style={{width:"100%",padding:"18px 0",fontSize:18,fontWeight:700,background:name.trim()&&finalArc.trim()?"linear-gradient(135deg,#f9a01b,#ffd700)":"#222",border:"none",borderRadius:12,color:name.trim()&&finalArc.trim()?"#000":"#555",cursor:name.trim()&&finalArc.trim()?"pointer":"not-allowed",fontFamily:"sans-serif"}}>
-          前往选秀大会 →
+          {t("create.go_draft", lang)}
         </button>
       </div>
     </div>
@@ -842,7 +868,7 @@ function CreateScreen({onDone, onBack}: any) {
 }
 
 // ════════════════ DRAFT ════════════════
-function DraftScreen({player, onDrafted, onBack}) {
+function DraftScreen({player, onDrafted, onBack, lang, setLang}: any) {
   const [phase, setPhase] = useState("intro");
   const [pick, setPick] = useState(0);
   const [dt, setDt] = useState(null);
@@ -854,44 +880,45 @@ function DraftScreen({player, onDrafted, onBack}) {
     const pn = Math.floor(Math.random()*30)+1;
     const t = ALL_TEAMS[Math.floor(Math.random()*ALL_TEAMS.length)];
     setPick(pn); setDt(t);
-    const txt = await aiCall("你是NBA选秀夜解说员。中文3句话："+player.name+"（"+player.position+"，"+player.archetype+"）第"+pn+"顺位被"+t.city+t.name+"选中。画面感强，充满戏剧性。只输出解说词。");
+    const txt = await aiCall("你是NBA选秀夜解说员。中文3句话："+player.name+"（"+player.position+"，"+player.archetype+"）第"+pn+"顺位被"+t.city+t.name+"选中。画面感强，充满戏剧性。只输出解说词。", lang);
     setStory(txt||"掌声雷动！这位新秀即将开启他的NBA传奇！");
     setLoading(false); setPhase("result");
   }
 
   if(phase==="intro") return (
     <div style={{minHeight:"100vh",background:"#0a0a0f",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"sans-serif",color:"#fff",position:"relative"}}>
-      <button onClick={onBack} style={{position:"absolute",top:20,left:20,background:"#ffffff11",border:"none",color:"#fff",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:"sans-serif",fontSize:13}}>返回</button>
-      <div style={{fontSize:11,color:"#f9a01b",letterSpacing:4,marginBottom:12}}>NBA DRAFT NIGHT</div>
-      <div style={{fontSize:36,fontWeight:900,textAlign:"center",marginBottom:8}}>你已就位</div>
-      <div style={{fontSize:15,color:"#888",textAlign:"center",marginBottom:36}}>{player.name} · {player.position} · {player.archetype}</div>
-      <div style={{fontSize:14,color:"#aaa",textAlign:"center",lineHeight:1.8,marginBottom:48,maxWidth:300}}>30支球队的GM都在研究你的录像。<br/>选秀大厅灯光璀璨，你西装笔挺地坐在台下……</div>
-      <button onClick={runDraft} style={{padding:"18px 48px",fontSize:18,fontWeight:700,background:"linear-gradient(135deg,#f9a01b,#ffd700)",border:"none",borderRadius:14,color:"#000",cursor:"pointer",fontFamily:"sans-serif"}}>开始选秀</button>
+      <button onClick={onBack} style={{position:"absolute",top:20,left:20,background:"#ffffff11",border:"none",color:"#fff",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:"sans-serif",fontSize:13}}>{t("app.back", lang)}</button>
+      <div style={{position:"absolute",top:20,right:20}}><LangToggle lang={lang} setLang={setLang}/></div>
+      <div style={{fontSize:11,color:"#f9a01b",letterSpacing:4,marginBottom:12}}>{t("draft.subtitle", lang)}</div>
+      <div style={{fontSize:36,fontWeight:900,textAlign:"center",marginBottom:8}}>{t("draft.you_are_in", lang)}</div>
+      <div style={{fontSize:15,color:"#888",textAlign:"center",marginBottom:36}}>{player.name} · {player.position} · {tx(player.archetype, lang)}</div>
+      <div style={{fontSize:14,color:"#aaa",textAlign:"center",lineHeight:1.8,marginBottom:48,maxWidth:300,whiteSpace:"pre-line"}}>{t("draft.intro", lang)}</div>
+      <button onClick={runDraft} style={{padding:"18px 48px",fontSize:18,fontWeight:700,background:"linear-gradient(135deg,#f9a01b,#ffd700)",border:"none",borderRadius:14,color:"#000",cursor:"pointer",fontFamily:"sans-serif"}}>{t("draft.start", lang)}</button>
     </div>
   );
 
   if(loading) return (
     <div style={{minHeight:"100vh",background:"#0a0a0f",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"sans-serif"}}>
       <div style={{fontSize:48,marginBottom:20}}>🎤</div>
-      <div style={{fontSize:18,color:"#f9a01b"}}>选秀进行中...</div>
+      <div style={{fontSize:18,color:"#f9a01b"}}>{t("draft.in_progress", lang)}</div>
     </div>
   );
 
   if(phase==="result" && dt) return (
     <div style={{minHeight:"100vh",background:"#0a0a0f",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"sans-serif",color:"#fff"}}>
-      <div style={{fontSize:13,color:"#888",letterSpacing:3,marginBottom:4}}>第 {pick} 顺位</div>
-      <div style={{fontSize:11,color:"#f9a01b",letterSpacing:4,marginBottom:20}}>NBA DRAFT PICK</div>
+      <div style={{fontSize:13,color:"#888",letterSpacing:3,marginBottom:4}}>{t("draft.pick_n", lang, {n: pick})}</div>
+      <div style={{fontSize:11,color:"#f9a01b",letterSpacing:4,marginBottom:20}}>{t("draft.label_pick", lang)}</div>
       <div style={{background:dt.color,border:"2px solid "+dt.accent,borderRadius:20,padding:"24px 40px",textAlign:"center",marginBottom:20,boxShadow:"0 0 40px "+dt.accent+"44"}}>
         <div style={{fontSize:42,color:dt.accent,fontWeight:900}}>{dt.abbr}</div>
-        <div style={{fontSize:15,color:"#fff"}}>{dt.city} {dt.name}</div>
+        <div style={{fontSize:15,color:"#fff"}}>{teamFull(dt.abbr, lang)}</div>
       </div>
       <div style={{fontSize:21,fontWeight:700,marginBottom:4}}>{player.name}</div>
-      <div style={{fontSize:13,color:"#aaa",marginBottom:20}}>{player.position} · {player.archetype}</div>
+      <div style={{fontSize:13,color:"#aaa",marginBottom:20}}>{player.position} · {tx(player.archetype, lang)}</div>
       {story && <div style={{background:"#0f1923",borderRadius:12,padding:14,borderLeft:"4px solid "+dt.accent,marginBottom:24,maxWidth:360}}>
-        <div style={{fontSize:10,color:dt.accent,letterSpacing:2,marginBottom:6}}>解说</div>
+        <div style={{fontSize:10,color:dt.accent,letterSpacing:2,marginBottom:6}}>{t("draft.commentary", lang)}</div>
         <div style={{fontSize:14,color:"#ddd",lineHeight:1.7}}>{story}</div>
       </div>}
-      <button onClick={()=>onDrafted(dt,pick)} style={{padding:"16px 40px",fontSize:16,fontWeight:700,background:dt.color,border:"2px solid "+dt.accent,borderRadius:12,color:dt.accent,cursor:"pointer",fontFamily:"sans-serif"}}>开始生涯 →</button>
+      <button onClick={()=>onDrafted(dt,pick)} style={{padding:"16px 40px",fontSize:16,fontWeight:700,background:dt.color,border:"2px solid "+dt.accent,borderRadius:12,color:dt.accent,cursor:"pointer",fontFamily:"sans-serif"}}>{t("draft.start_career", lang)}</button>
     </div>
   );
 
@@ -905,7 +932,7 @@ function StandingsView({standings, myTeamAbbr, ac}) {
   if(!standings) return (
     <div style={{padding:20,textAlign:"center",color:"#444"}}>
       <div style={{fontSize:28,marginBottom:8}}>📊</div>
-      <div>完成几场比赛后联盟战绩才会显示</div>
+      <div>{t("standings.empty", lang)}</div>
     </div>
   );
   const data = tab==="west" ? standings.west : standings.east;
@@ -931,14 +958,14 @@ function StandingsView({standings, myTeamAbbr, ac}) {
 
       {/* Legend */}
       <div style={{display:"flex",gap:10,marginBottom:8,fontSize:10,color:"#555",paddingLeft:4}}>
-        <span style={{color:"#00ff88"}}>■ 直接晋级</span>
-        <span style={{color:"#f9a01b"}}>■ 附加赛 (7-10)</span>
-        <span>■ 淘汰</span>
+        <span style={{color:"#00ff88"}}>{t("standings.legend_direct", lang)}</span>
+        <span style={{color:"#f9a01b"}}>{t("standings.legend_playin", lang)}</span>
+        <span>{t("standings.legend_out", lang)}</span>
       </div>
 
       {/* Table header */}
       <div style={{display:"grid",gridTemplateColumns:"24px 1fr 36px 36px 50px",gap:4,padding:"6px 10px",borderBottom:"1px solid #ffffff11",fontSize:10,color:"#555"}}>
-        <span>#</span><span>球队</span><span style={{textAlign:"center"}}>胜</span><span style={{textAlign:"center"}}>负</span><span style={{textAlign:"right"}}>胜率</span>
+        <span>#</span><span>{t("standings.col_team", lang)}</span><span style={{textAlign:"center"}}>{t("standings.col_w", lang)}</span><span style={{textAlign:"center"}}>{t("standings.col_l", lang)}</span><span style={{textAlign:"right"}}>{t("standings.col_pct", lang)}</span>
       </div>
 
       {data.map((t,i)=>{
@@ -952,7 +979,7 @@ function StandingsView({standings, myTeamAbbr, ac}) {
               <div style={{width:8,height:8,borderRadius:2,background:t.color,border:"1px solid "+t.accent,flexShrink:0}}/>
               <div>
                 <div style={{fontSize:12,fontWeight:isMine?700:400,color:isMine?"#fff":"#ccc"}}>{t.city} {t.name}</div>
-                {isMine && <div style={{fontSize:9,color:ac}}>← 你的球队</div>}
+                {isMine && <div style={{fontSize:9,color:ac}}>{t("standings.your_team", lang)}</div>}
               </div>
             </div>
             <span style={{textAlign:"center",fontSize:13,fontWeight:700,color:"#00ff88"}}>{t.wins}</span>
@@ -964,12 +991,9 @@ function StandingsView({standings, myTeamAbbr, ac}) {
 
       {/* Play-in explanation */}
       <div style={{background:"#111827",borderRadius:10,padding:12,marginTop:14,border:"1px solid #ffffff0d"}}>
-        <div style={{fontSize:11,color:"#f9a01b",marginBottom:6}}>附加赛规则</div>
+        <div style={{fontSize:11,color:"#f9a01b",marginBottom:6}}>{t("standings.playin_rules_title", lang)}</div>
         <div style={{fontSize:11,color:"#777",lineHeight:1.7}}>
-          7号打8号 → 赢者直接晋级第7种子<br/>
-          9号打10号 → 赢者获得机会<br/>
-          7/8输者 vs 9/10赢者 → 赢者晋级第8种子<br/>
-          11-15名：直接无缘季后赛
+          <span style={{whiteSpace:"pre-line"}}>{t("standings.playin_rules", lang)}</span>
         </div>
       </div>
     </div>
@@ -998,7 +1022,7 @@ function SeriesCard({series, myTeamAbbr, teamColor, ac, onSimGame, simming}) {
         <div style={{fontSize:12,color:series.winner===aT.abbr?"#00ff88":"#aaa",fontWeight:series.winner===aT.abbr?700:400}}>{aT.abbr}</div>
         <div style={{fontSize:12,color:"#555"}}>{series.winsA} - {series.winsB}</div>
         <div style={{fontSize:12,color:series.winner===bT.abbr?"#00ff88":"#aaa",fontWeight:series.winner===bT.abbr?700:400}}>{bT.abbr}</div>
-        {!done && <div style={{fontSize:10,color:"#444"}}>进行中</div>}
+        {!done && <div style={{fontSize:10,color:"#444"}}>{t("playoffs.in_progress", lang)}</div>}
         {done && <div style={{fontSize:10,color:"#00ff88"}}>✓</div>}
       </div>
     );
@@ -1008,9 +1032,9 @@ function SeriesCard({series, myTeamAbbr, teamColor, ac, onSimGame, simming}) {
   return (
     <div style={{background:iWon?"#0d2a1a":iLost?"#2a0d0d":"#0d1a2a",borderRadius:12,padding:14,marginBottom:10,border:"1px solid "+(iWon?"#00ff8844":iLost?"#ff444444":ac+"44")}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-        <div style={{fontSize:12,color:"#888"}}>{series.round} {isMyMatch&&"· 我的对阵"}</div>
-        {iWon && <div style={{fontSize:12,color:"#00ff88",fontWeight:700}}>✓ 晋级</div>}
-        {iLost && <div style={{fontSize:12,color:"#ff5555",fontWeight:700}}>✗ 出局</div>}
+        <div style={{fontSize:12,color:"#888"}}>{tx(series.round, lang)} {isMyMatch ? "· " + t("playoffs.my_match", lang) : ""}</div>
+        {iWon && <div style={{fontSize:12,color:"#00ff88",fontWeight:700}}>{t("playoffs.advance", lang)}</div>}
+        {iLost && <div style={{fontSize:12,color:"#ff5555",fontWeight:700}}>{t("playoffs.eliminated", lang)}</div>}
       </div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
         <div style={{textAlign:"center"}}>
@@ -1039,7 +1063,7 @@ function SeriesCard({series, myTeamAbbr, teamColor, ac, onSimGame, simming}) {
       {!done && (
         <button onClick={onSimGame} disabled={simming}
           style={{width:"100%",padding:"10px 0",background:teamColor,border:"1px solid "+ac,borderRadius:10,color:ac,fontWeight:700,fontSize:13,cursor:simming?"not-allowed":"pointer",fontFamily:"sans-serif"}}>
-          {simming?"模拟中...":"▶ 模拟第"+(myWins+oppWins+1)+"场"}
+          {simming?t("playoffs.simming", lang):t("playoffs.sim_game_n", lang, {n: myWins+oppWins+1})}
         </button>
       )}
     </div>
@@ -1074,19 +1098,19 @@ function PlayoffView({bracket, myTeam, onSimGame, simming, onOffseason, onAutoSi
       {nextActiveSeries && !champion && (
         <div style={{background:"#111827",borderRadius:10,padding:"12px 14px",marginBottom:12,border:"1px solid "+ac+"44",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
           <div>
-            <div style={{fontSize:11,color:"#888"}}>下一场</div>
+            <div style={{fontSize:11,color:"#888"}}>{t("playoffs.next_game", lang)}</div>
             <div style={{fontSize:13,fontWeight:700,color:"#ccc"}}>{nextActiveSeries.teamA.abbr} vs {nextActiveSeries.teamB.abbr} · {nextActiveSeries.round}</div>
           </div>
           <div style={{display:"flex",gap:6}}>
             <button onClick={()=>onSimGame(nextActiveSeries)} disabled={simming}
               style={{padding:"9px 14px",background:simming?"#222":myTeam.color,border:"1px solid "+(simming?"#333":ac),borderRadius:9,color:simming?"#444":ac,fontWeight:700,fontSize:13,cursor:simming?"not-allowed":"pointer",fontFamily:"sans-serif"}}>
-              {simming?"模拟中...":"▶ 单场"}
+              {simming?t("playoffs.simming", lang):t("playoffs.sim_one", lang)}
             </button>
             {/* D6: auto-sim all remaining */}
             {onAutoSimAll && (
               <button onClick={onAutoSimAll} disabled={simming}
                 style={{padding:"9px 14px",background:simming?"#222":"#1a1a0d",border:"1px solid "+(simming?"#333":"#f9a01b66"),borderRadius:9,color:simming?"#444":"#f9a01b",fontWeight:700,fontSize:13,cursor:simming?"not-allowed":"pointer",fontFamily:"sans-serif"}}>
-                ⏩ 全部
+                {t("playoffs.sim_all", lang)}
               </button>
             )}
           </div>
@@ -1105,7 +1129,7 @@ function PlayoffView({bracket, myTeam, onSimGame, simming, onOffseason, onAutoSi
 
       {(myNotIn && tab===myTeam.conf.toLowerCase()) && (
         <div style={{background:"#2a0d0d",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#ff8888",border:"1px solid #ff444422"}}>
-          ⚠ 你的球队未进入季后赛 — 仍可观看并模拟其他对阵
+          {t("playoffs.not_in_playoff", lang)}
         </div>
       )}
 
@@ -1115,7 +1139,7 @@ function PlayoffView({bracket, myTeam, onSimGame, simming, onOffseason, onAutoSi
 
       {finals && (
         <div style={{marginTop:14}}>
-          <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2,marginBottom:8}}>🏆 NBA总决赛</div>
+          <div style={{fontSize:11,color:"#f9a01b",letterSpacing:2,marginBottom:8}}>{t("playoffs.finals_label", lang)}</div>
           <SeriesCard series={finals} myTeamAbbr={myTeam.abbr} teamColor={myTeam.color} ac={ac} onSimGame={()=>onSimGame(finals)} simming={simming}/>
         </div>
       )}
@@ -1123,7 +1147,7 @@ function PlayoffView({bracket, myTeam, onSimGame, simming, onOffseason, onAutoSi
       {champion && (
         <div style={{background:"#1a2a0d",borderRadius:12,padding:16,textAlign:"center",border:"1px solid #ffd70044",marginTop:10}}>
           <div style={{fontSize:28,marginBottom:4}}>🏆</div>
-          <div style={{fontSize:18,fontWeight:900,color:"#ffd700"}}>{champion===myTeam.abbr?"NBA总冠军！":"季后赛冠军："+champion}</div>
+          <div style={{fontSize:18,fontWeight:900,color:"#ffd700"}}>{champion===myTeam.abbr?t("playoffs.champion_won", lang):t("playoffs.champion_team", lang, {team: teamFull(champion, lang)})}</div>
         </div>
       )}
 
@@ -1137,7 +1161,7 @@ function PlayoffView({bracket, myTeam, onSimGame, simming, onOffseason, onAutoSi
       {(isMyOut||myNotIn||champion) && (
         <button onClick={onOffseason}
           style={{width:"100%",marginTop:12,padding:"12px 0",background:"#1a1a0d",border:"1px solid #f9a01b44",borderRadius:10,color:"#f9a01b",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"sans-serif"}}>
-          → 进入休赛期
+          {t("playoffs.to_offseason", lang)}
         </button>
       )}
     </div>
@@ -1158,12 +1182,12 @@ function generateTeammates() {
   }));
 }
 
-function generateSeasonAwards(playerName: string, teamAbbr: string, teamName: string, avg: any, ovr: number, wins: number, season: number, playoffBracket: any, finalsAvg: any) {
+function generateSeasonAwards(playerName: string, teamAbbr: string, _teamName: string, avg: any, ovr: number, wins: number, season: number, playoffBracket: any, finalsAvg: any, lang: Lang = "zh") {
   // C (B2+B3+B12): rewritten. Uses a name pool of ~2500 transliterated names.
   // League stars are 1 per team (ovr biased by team strength seed). Rookies are
   // 20 random. Awards picked by ovr ranking with player injected. FMVP requires
   // player actually played the finals AND averaged ≥20 pts.
-  const pool = buildNamePool();
+  const pool = buildNamePool(lang);
   const stars = generateLeagueStars(pool);
   const rookies = generateRookies(pool, ALL_TEAMS.length);
 
@@ -1202,7 +1226,7 @@ function generateSeasonAwards(playerName: string, teamAbbr: string, teamName: st
 
   const actualChampAbbr = playoffBracket ? playoffBracket.champion : null;
   const actualChampTeam = actualChampAbbr ? (ALL_TEAMS.find(t => t.abbr === actualChampAbbr) || null) : null;
-  const championName = actualChampTeam ? actualChampTeam.city + " " + actualChampTeam.name : "—";
+  const championName = actualChampAbbr ? teamFull(actualChampAbbr, lang) : "—";
   const iChampion = actualChampAbbr === teamAbbr;
 
   let fmvp: string;
@@ -1218,7 +1242,7 @@ function generateSeasonAwards(playerName: string, teamAbbr: string, teamName: st
     fmvp = "—";
   }
 
-  const bestCoach = ["史蒂夫·科尔","泰隆·卢","迈克·布登霍尔泽","埃里克·斯波斯特拉","里克·卡莱尔","格雷格·波波维奇","扬尼斯·阿代托昆博","蒙蒂·威廉斯","迈克·马龙","贾森·基德"][Math.floor(Math.random() * 10)];
+  const bestCoach = COACHES_BILINGUAL[Math.floor(Math.random() * COACHES_BILINGUAL.length)][lang];
 
   return {
     mvp, allNBA1, allNBA2, allNBA3,
@@ -1228,7 +1252,7 @@ function generateSeasonAwards(playerName: string, teamAbbr: string, teamName: st
   };
 }
 
-function MainScreen({saveId, init, onQuit}) {
+function MainScreen({saveId, init, onQuit, lang, setLang}: any) {
   const [player, setPlayer] = useState(() => ({...init.player, age: init.player.age || 19}));
   const [team, setTeam] = useState(init.team);
   const [season, setSeason] = useState(init.season||1);
@@ -1418,7 +1442,7 @@ function MainScreen({saveId, init, onQuit}) {
       setNarrativeCtx(lastG);
       if(games.length===1 && !lastG.stats?.rested) {
         const oppT = ALL_TEAMS.find(t=>t.abbr===lastG.opp)||ALL_TEAMS[0];
-        const txt = await aiCall("你是NBA解说员。中文3句话："+player.name+"（"+team.city+team.name+"，"+player.position+"，"+player.archetype+"）对阵"+oppT.city+oppT.name+"。"+lastG.stats.pts+"分 "+lastG.stats.ast+"助 "+lastG.stats.reb+"篮，"+(lastG.status==="won"?"胜":"负")+"。"+(lastG.stats.injured?"带伤出战。":"")+"体现"+player.archetype+"风格。只输出解说词。");
+        const txt = await aiCall("你是NBA解说员。中文3句话："+player.name+"（"+team.city+team.name+"，"+player.position+"，"+player.archetype+"）对阵"+oppT.city+oppT.name+"。"+lastG.stats.pts+"分 "+lastG.stats.ast+"助 "+lastG.stats.reb+"篮，"+(lastG.status==="won"?"胜":"负", lang)+"。"+(lastG.stats.injured?"带伤出战。":"")+"体现"+player.archetype+"风格。只输出解说词。", lang);
         setNarrative((injEvent?injEvent+"\n\n":"")+(txt||"精彩比赛！"));
       } else {
         setNarrative((injEvent||"")+(injEvent?"\n\n":"")+(games.length>1?"已完成 "+games.length+" 场模拟。":"本场球员休战。"));
@@ -1527,7 +1551,7 @@ function MainScreen({saveId, init, onQuit}) {
     if(result&&result.isMyMatch) {
       const oppT = ALL_TEAMS.find(t=>t.abbr===result.nextG.opp)||ALL_TEAMS[0];
       const myWin = result.imTeamA?(result.s.games.find(g=>g.id===result.nextG.id)?.status==="won"):!(result.s.games.find(g=>g.id===result.nextG.id)?.status==="won");
-      const txt = await aiCall("NBA季后赛解说员。中文3句话："+player.name+"（"+team.city+team.name+"）季后赛"+result.s.round+"对阵"+oppT.city+oppT.name+"。"+result.res.pts+"分 "+result.res.ast+"助 "+result.res.reb+"篮，"+(myWin?"胜":"负")+"，系列赛"+(result.imTeamA?result.s.winsA:result.s.winsB)+"-"+(result.imTeamA?result.s.winsB:result.s.winsA)+"。只输出解说词。");
+      const txt = await aiCall("NBA季后赛解说员。中文3句话："+player.name+"（"+team.city+team.name+"）季后赛"+result.s.round+"对阵"+oppT.city+oppT.name+"。"+result.res.pts+"分 "+result.res.ast+"助 "+result.res.reb+"篮，"+(myWin?"胜":"负", lang)+"，系列赛"+(result.imTeamA?result.s.winsA:result.s.winsB)+"-"+(result.imTeamA?result.s.winsB:result.s.winsA)+"。只输出解说词。", lang);
       setNarrative((result.injEvent?result.injEvent+"\n\n":"")+(txt||"季后赛激战！"));
     }
     setSimming(false);
@@ -1600,11 +1624,9 @@ function MainScreen({saveId, init, onQuit}) {
       setTeam(newTeam);
       setTeammates(curTeammates);
       setRelationships(curRels);
-      setInjuryLog(prev => [...prev, {name:"被交易至 "+newTeam.abbr, date: new Date().toISOString(), type:"trade"}]);
+      setInjuryLog(prev => [...prev, {name:t("trade.injurylog_passive", lang, {abbr: newTeam.abbr}), date: new Date().toISOString(), type:"trade"}]);
       // Show a one-time notification via narrative
-      setNarrative("📰 重磅交易！你被 "+team.city+team.name+" 送到了 "+newTeam.city+newTeam.name+"。" +
-        (relsBad ? "管理层关系恶化已久。" : "") +
-        (recentBigInjury ? "球队不愿承担你的伤病恢复成本。" : ""));
+      setNarrative(t("trade.passive_headline", lang, {from: teamFull(team.abbr, lang), to: teamFull(newTeam.abbr, lang), reasons: (relsBad ? t("trade.reason_bad_rel", lang) : "") + (recentBigInjury ? t("trade.reason_injury", lang) : "")}));
     }
 
     // D3: age++ and apply potential decay after 32
@@ -1660,7 +1682,7 @@ function MainScreen({saveId, init, onQuit}) {
     setSavings(prev => Math.max(0, +(prev + annualSavings - extraRentCharge).toFixed(2)));
     // Generate awards
     const finalsAvg = calcFinalsAvg(playoffBracket, team.abbr);
-    const awards = generateSeasonAwards(player.name, team.abbr, team.name, avg, player.overall, wins, season, playoffBracket, finalsAvg);
+    const awards = generateSeasonAwards(player.name, team.abbr, "", avg, player.overall, wins, season, playoffBracket, finalsAvg, lang);
     setSeasonAwards(awards);
     setShowAwards(true);
     // Update teammate rapport
@@ -1712,12 +1734,12 @@ function MainScreen({saveId, init, onQuit}) {
 
   // Health status
   function getHealthStatus() {
-    if(resting>0) return {label:"主动休战",color:"#88aaff",icon:"😴",detail:"还有 "+resting+" 场休战"};
-    if(!injury) return {label:"状态健康",color:"#00ff88",icon:"✅",detail:"身体无异样"};
-    if(injury.severity==="赛季报销") return {label:"赛季报销",color:"#ff2244",icon:"🚑",detail:injury.name+" · 还需 "+(injury.daysLeft||0)+" 天"};
-    if(injury.severity==="重伤") return {label:"重伤",color:"#ff4444",icon:"🤕",detail:injury.name+" · 还需 "+(injury.daysLeft||0)+" 天"};
-    if(injury.severity==="中伤") return {label:"轻中度伤病",color:"#ff8844",icon:"🤕",detail:injury.name+" · 还需 "+(injury.daysLeft||0)+" 天"};
-    return {label:"轻伤",color:"#ffaa44",icon:"🤕",detail:injury.name+" · 还需 "+(injury.daysLeft||0)+" 天"};
+    if(resting>0) return {label:t("health.rest", lang),color:"#88aaff",icon:"😴",detail:t("health.rest_detail", lang, {n: resting})};
+    if(!injury) return {label:t("health.healthy", lang),color:"#00ff88",icon:"✅",detail:t("player.body_no_injury", lang)};
+    if(injury.severity==="赛季报销") return {label:t("health.season", lang),color:"#ff2244",icon:"🚑",detail:t("health.detail_days", lang, {name: tx(injury.name, lang), n: injury.daysLeft||0})};
+    if(injury.severity==="重伤") return {label:t("health.serious", lang),color:"#ff4444",icon:"🤕",detail:t("health.detail_days", lang, {name: tx(injury.name, lang), n: injury.daysLeft||0})};
+    if(injury.severity==="中伤") return {label:t("health.medium", lang),color:"#ff8844",icon:"🤕",detail:t("health.detail_days", lang, {name: tx(injury.name, lang), n: injury.daysLeft||0})};
+    return {label:t("health.minor", lang),color:"#ffaa44",icon:"🤕",detail:t("health.detail_days", lang, {name: tx(injury.name, lang), n: injury.daysLeft||0})};
   }
   const health = getHealthStatus();
 
@@ -1726,7 +1748,7 @@ function MainScreen({saveId, init, onQuit}) {
     const labs={coach:"主教练",gm:"总经理",owner:"老板",star:"球队核心",teammate:"更衣室"};
     const val=relationships[key];
     const q=val>=70?"融洽":val>=45?"一般":"紧张";
-    const txt=await aiCall("NBA剧情叙述者。中文2句话："+player.name+"与"+labs[key]+"关系（值"+val+"/100，"+q+"）。根据好坏写不同故事，真实感强。只输出叙述。");
+    const txt=await aiCall("NBA剧情叙述者。中文2句话："+player.name+"与"+labs[key]+"关系（值"+val+"/100，"+q+"）。根据好坏写不同故事，真实感强。只输出叙述。", lang);
     setRelStory(prev=>({...prev,[key]:txt||"关系"+q+"，保持职业。"}));
     setRelLoading(false);
   }
@@ -1738,22 +1760,22 @@ function MainScreen({saveId, init, onQuit}) {
     //     20% rejected + reputation damage → relations -15/-12.
     const roll = Math.random();
     const tgt = pickTradeDestination(team.abbr, player.overall);
-    const txt = await aiCall("NBA剧情叙述者。中文3句话："+player.name+"向"+team.city+team.name+"申请交易，可能去"+tgt.city+tgt.name+"。戏剧性强。只输出叙述。");
+    const txt = await aiCall("NBA剧情叙述者。中文3句话："+player.name+"向"+team.city+team.name+"申请交易，可能去"+tgt.city+tgt.name+"。戏剧性强。只输出叙述。", lang);
 
     if(roll < 0.30) {
       // Accepted
-      setTradeResult("✓ 交易成功！你被交易到了 "+tgt.city+tgt.name+"。\n\n"+(txt||""));
+      setTradeResult(t("trade.headline_player", lang, {team: teamFull(tgt.abbr, lang), story: txt||""}));
       setTeam(tgt);
       setTeammates(generateTeammates());
       setRelationships({coach:55, gm:50, owner:50, star:45, teammate:60}); // fresh start
-      setInjuryLog(prev => [...prev, {name:"交易至 "+tgt.abbr, date:new Date().toISOString(), type:"trade"}]);
+      setInjuryLog(prev => [...prev, {name:t("trade.injurylog_trade_to", lang, {abbr: tgt.abbr}), date:new Date().toISOString(), type:"trade"}]);
     } else if(roll < 0.80) {
       // Rejected, mild damage
-      setTradeResult("✗ 交易申请被拒绝。\n\n"+(txt||""));
+      setTradeResult(t("trade.rejected", lang, {story: txt||""}));
       setRelationships((prev: any) => ({...prev, gm: Math.max(0, prev.gm-10), owner: Math.max(0, prev.owner-8)}));
     } else {
       // Rejected, reputation hit
-      setTradeResult("✗ 交易申请泄露，更衣室震荡。\n\n"+(txt||""));
+      setTradeResult(t("trade.leaked", lang, {story: txt||""}));
       setRelationships((prev: any) => ({...prev, gm: Math.max(0, prev.gm-15), owner: Math.max(0, prev.owner-12), teammate: Math.max(0, prev.teammate-8)}));
     }
     setTradeLoading(false);
@@ -1766,28 +1788,28 @@ function MainScreen({saveId, init, onQuit}) {
     return (
       <div style={{minHeight:"100vh",background:"#0a0a0f",color:"#fff",fontFamily:"sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
         <div style={{fontSize:64,marginBottom:16}}>🏆</div>
-        <div style={{fontSize:11,color:"#f9a01b",letterSpacing:4,marginBottom:8}}>CAREER COMPLETE</div>
+        <div style={{fontSize:11,color:"#f9a01b",letterSpacing:4,marginBottom:8}}>{t("retire.complete", lang)}</div>
         <div style={{fontSize:28,fontWeight:900,marginBottom:6,textAlign:"center"}}>{player.name}</div>
         <div style={{fontSize:13,color:"#aaa",marginBottom:24,textAlign:"center"}}>
-          {team.city} {team.name} · {player.position} · {player.age} 岁
+          {teamFull(team.abbr, lang)} · {player.position} · {t("app.years_old", lang, {n: player.age})}
         </div>
         <div style={{background:"#111827",borderRadius:12,padding:20,marginBottom:16,minWidth:280,border:"1px solid #ffffff0d"}}>
-          <div style={{fontSize:11,color:"#888",letterSpacing:2,marginBottom:10}}>生涯总览</div>
+          <div style={{fontSize:11,color:"#888",letterSpacing:2,marginBottom:10}}>{t("retire.summary", lang)}</div>
           <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:13}}>
-            <span style={{color:"#888"}}>赛季数</span><span style={{fontWeight:700}}>{season}</span>
+            <span style={{color:"#888"}}>{t("retire.seasons", lang)}</span><span style={{fontWeight:700}}>{season}</span>
           </div>
           <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:13}}>
-            <span style={{color:"#888"}}>退役 OVR</span><span style={{fontWeight:700,color:"#f9a01b"}}>{player.overall}</span>
+            <span style={{color:"#888"}}>{t("retire.retire_ovr", lang)}</span><span style={{fontWeight:700,color:"#f9a01b"}}>{player.overall}</span>
           </div>
           {seasonAwards && seasonAwards.iChampion && (
             <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:13}}>
-              <span style={{color:"#888"}}>总冠军</span><span style={{color:"#ffd700"}}>🏆 至少 1 次</span>
+              <span style={{color:"#888"}}>{t("retire.championships", lang)}</span><span style={{color:"#ffd700"}}>{t("retire.at_least_one_champ", lang)}</span>
             </div>
           )}
         </div>
         <button onClick={onQuit}
           style={{padding:"14px 36px",background:"linear-gradient(135deg,#f9a01b,#ffd700)",border:"none",borderRadius:12,color:"#000",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"sans-serif"}}>
-          返回存档大厅
+          {t("retire.return_to_lobby", lang)}
         </button>
       </div>
     );
@@ -1800,29 +1822,33 @@ function MainScreen({saveId, init, onQuit}) {
       <div style={{background:team.color,padding:"12px 16px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <button onClick={()=>{doSave();onQuit();}} style={{background:"rgba(0,0,0,0.3)",border:"none",color:"#fff",borderRadius:8,padding:"5px 10px",cursor:"pointer",fontFamily:"sans-serif",fontSize:12}}>← 存档</button>
+            <button onClick={()=>{doSave();onQuit();}} style={{background:"rgba(0,0,0,0.3)",border:"none",color:"#fff",borderRadius:8,padding:"5px 10px",cursor:"pointer",fontFamily:"sans-serif",fontSize:12}}>{t("main.save_btn", lang)}</button>
             <div>
               <div style={{fontSize:15,fontWeight:800,color:ac}}>{player.name}</div>
-              <div style={{fontSize:11,opacity:0.8}}>{team.city} {team.name} · S{season} · {player.age}岁 · ${contract.salary}M</div>
+              <div style={{fontSize:11,opacity:0.8}}>{teamFull(team.abbr, lang)} · S{season} · {t("app.years_old", lang, {n: player.age})} · ${contract.salary}M</div>
             </div>
           </div>
           <div style={{textAlign:"right"}}>
-            <div style={{fontSize:16,fontWeight:700}}>{wins}胜 {played.length-wins}负</div>
+            <div style={{fontSize:16,fontWeight:700}}>{t("app.wins_losses", lang, {w: wins, l: played.length-wins})}</div>
             <div style={{display:"flex",gap:6,justifyContent:"flex-end",fontSize:11}}>
               <span style={{color:ac}}>OVR {player.overall}</span>
               <span style={{color:health.color}}>{health.icon} {health.label}</span>
-              {saveMsg && <span style={{color:"#00ff88"}}>{saveMsg}</span>}
+              {saveMsg && <span style={{color:"#00ff88"}}>{t("main.saved", lang)}</span>}
             </div>
           </div>
         </div>
       </div>
 
+      {/* Lang toggle pinned to right edge above tabs */}
+      <div style={{display:"flex",justifyContent:"flex-end",padding:"4px 10px",background:"#0d0d14"}}>
+        <LangToggle lang={lang} setLang={setLang}/>
+      </div>
       {/* Tabs */}
       <div style={{display:"flex",background:"#0d0d14",borderBottom:"1px solid #ffffff0d",overflowX:"auto"}}>
-        {[["calendar","📅 赛程"],["playoffs","🏆 季后赛"],["standings","📋 战绩"],["player","🧬 球员"],["stats","📊 数据"],["offseason","🏋 训练"],["relations","👥 人际"],["agent","💰 经纪"],["finances","🏠 财产"]].map(([v,l])=>(
+        {[["calendar","tab.calendar"],["playoffs","tab.playoffs"],["standings","tab.standings"],["player","tab.player"],["stats","tab.stats"],["offseason","tab.offseason"],["relations","tab.relations"],["agent","tab.agent"],["finances","tab.finances"]].map(([v,k])=>(
           <button key={v} onClick={()=>setView(v)}
             style={{flex:"0 0 auto",padding:"11px 12px",background:"transparent",border:"none",borderBottom:view===v?"2px solid "+ac:"2px solid transparent",color:view===v?ac:"#555",fontSize:11,fontWeight:view===v?700:400,cursor:"pointer",fontFamily:"sans-serif",whiteSpace:"nowrap"}}>
-            {l}
+            {t(k, lang)}
           </button>
         ))}
       </div>
@@ -1830,19 +1856,19 @@ function MainScreen({saveId, init, onQuit}) {
       {/* Alerts */}
       {tradeDanger && (
         <div style={{background:"#2a0d0d",padding:"8px 16px",fontSize:12,color:"#ff8888",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span>⚠ 管理层关系告急，可能被交易</span>
-          <button onClick={()=>setView("relations")} style={{background:"transparent",border:"1px solid #ff8888",color:"#ff8888",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontFamily:"sans-serif",fontSize:11}}>查看</button>
+          <span>{t("alert.trade_danger", lang)}</span>
+          <button onClick={()=>setView("relations")} style={{background:"transparent",border:"1px solid #ff8888",color:"#ff8888",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontFamily:"sans-serif",fontSize:11}}>{t("alert.trade_view", lang)}</button>
         </div>
       )}
       {pendingBrand && (
         <div style={{background:"#0d2a1a",padding:"10px 16px",margin:"8px 14px",borderRadius:10,border:"1px solid #00ff8844",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
-            <div style={{fontSize:13,fontWeight:700,color:"#00ff88"}}>💼 经纪人：品牌邀约</div>
-            <div style={{fontSize:12,color:"#aaa"}}>{pendingBrand.icon} {pendingBrand.name}（{pendingBrand.type}）→ ${pendingBrand.offer}M/年</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#00ff88"}}>{t("alert.brand_offer", lang)}</div>
+            <div style={{fontSize:12,color:"#aaa"}}>{pendingBrand.icon} {pendingBrand.name}（{tx(pendingBrand.type, lang)}）→ ${pendingBrand.offer}M/年</div>
           </div>
           <div style={{display:"flex",gap:6}}>
-            <button onClick={()=>{setBrands(prev=>[...prev,pendingBrand]);setPendingBrand(null);}} style={{padding:"6px 12px",background:"#00ff88",border:"none",borderRadius:8,color:"#000",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>接受</button>
-            <button onClick={()=>setPendingBrand(null)} style={{padding:"6px 10px",background:"#333",border:"none",borderRadius:8,color:"#aaa",fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>拒绝</button>
+            <button onClick={()=>{setBrands(prev=>[...prev,pendingBrand]);setPendingBrand(null);}} style={{padding:"6px 12px",background:"#00ff88",border:"none",borderRadius:8,color:"#000",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>{t("alert.accept", lang)}</button>
+            <button onClick={()=>setPendingBrand(null)} style={{padding:"6px 10px",background:"#333",border:"none",borderRadius:8,color:"#aaa",fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>{t("alert.reject", lang)}</button>
           </div>
         </div>
       )}
@@ -1853,8 +1879,8 @@ function MainScreen({saveId, init, onQuit}) {
           {!seasonOver && !playoffBracket && (
             <div style={{background:"#111827",borderRadius:12,padding:24,textAlign:"center",border:"1px solid #ffffff0d"}}>
               <div style={{fontSize:28,marginBottom:10}}>🏀</div>
-              <div style={{fontSize:14,color:"#888"}}>常规赛结束后自动生成对阵表</div>
-              <div style={{fontSize:12,color:"#555",marginTop:6}}>{regularGames.filter(g=>g.status==="upcoming").length} 场比赛待模拟</div>
+              <div style={{fontSize:14,color:"#888"}}>{t("playoffs.empty_waiting", lang)}</div>
+              <div style={{fontSize:12,color:"#555",marginTop:6}}>{t("playoffs.empty_games_left", lang, {n: regularGames.filter(g=>g.status==="upcoming").length})}</div>
             </div>
           )}
           {playoffBracket && (
@@ -1880,7 +1906,7 @@ function MainScreen({saveId, init, onQuit}) {
                 const pb=buildNBAPlayoffBracket(st,team.abbr,2024+(season-1));
                 setLeagueStandings(st); setPlayoffBracket(pb);
               }} style={{padding:"12px 28px",background:team.color,border:"2px solid "+ac,borderRadius:10,color:ac,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"sans-serif"}}>
-                生成季后赛对阵表
+                {t("playoffs.generate_bracket", lang)}
               </button>
             </div>
           )}
@@ -1896,12 +1922,12 @@ function MainScreen({saveId, init, onQuit}) {
         <div style={{padding:14}}>
           {/* Health Card */}
           <div style={{background:"#111827",borderRadius:12,padding:16,marginBottom:12,border:"1px solid "+health.color+"44"}}>
-            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:10}}>健康状态</div>
+            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:10}}>{t("player.health_title", lang)}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
               <div>
                 <div style={{fontSize:18,fontWeight:700,color:health.color}}>{health.icon} {health.label}</div>
                 <div style={{fontSize:12,color:"#888",marginTop:4}}>{health.detail}</div>
-                {injury && <div style={{fontSize:11,color:"#aaa",marginTop:4}}>受影响属性：{injury.affectedStats.map(s=>STAT_LABELS[s]).join("、")}</div>}
+                {injury && <div style={{fontSize:11,color:"#aaa",marginTop:4}}>{t("player.injury_affected", lang)}{injury.affectedStats.map(s=>STAT_LABELS[s]).join("、")}</div>}
               </div>
               <div style={{textAlign:"right"}}>
                 {!injury && resting===0 && (
@@ -1926,19 +1952,19 @@ function MainScreen({saveId, init, onQuit}) {
 
           {/* Static Physicals */}
           <div style={{background:"#111827",borderRadius:12,padding:16,marginBottom:12,border:"1px solid #ffffff0d"}}>
-            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:12}}>身体天赋（静态）</div>
+            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:12}}>{t("player.body_static", lang)}</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
               <div style={{background:"#1a1a2e",borderRadius:10,padding:"10px 12px",flex:"1 1 80px",textAlign:"center"}}>
-                <div style={{fontSize:10,color:"#555",marginBottom:3}}>身高</div>
+                <div style={{fontSize:10,color:"#555",marginBottom:3}}>{t("create.height", lang)}</div>
                 <div style={{fontSize:17,fontWeight:700,color:ac}}>{ph.heightCm}<span style={{fontSize:11,color:"#666"}}>cm</span></div>
               </div>
               <div style={{background:"#1a1a2e",borderRadius:10,padding:"10px 12px",flex:"1 1 80px",textAlign:"center"}}>
-                <div style={{fontSize:10,color:"#555",marginBottom:3}}>臂展</div>
+                <div style={{fontSize:10,color:"#555",marginBottom:3}}>{t("create.wingspan", lang)}</div>
                 <div style={{fontSize:17,fontWeight:700,color:"#ccc"}}>{ph.wingspanCm}<span style={{fontSize:11,color:"#666"}}>cm</span></div>
                 <div style={{fontSize:9,color:ph.wingDelta>=6?"#00ff88":ph.wingDelta<0?"#ff8888":"#888"}}>{ph.wingDelta>0?"+"+ph.wingDelta:ph.wingDelta}cm</div>
               </div>
               <div style={{background:"#1a1a2e",borderRadius:10,padding:"10px 12px",flex:"1 1 80px",textAlign:"center"}}>
-                <div style={{fontSize:10,color:"#555",marginBottom:3}}>体重</div>
+                <div style={{fontSize:10,color:"#555",marginBottom:3}}>{t("create.weight", lang)}</div>
                 <div style={{fontSize:17,fontWeight:700,color:"#ccc"}}>{ph.weightKg}<span style={{fontSize:11,color:"#666"}}>kg</span></div>
               </div>
             </div>
@@ -1951,19 +1977,19 @@ function MainScreen({saveId, init, onQuit}) {
 
           {/* Dynamic Traits */}
           <div style={{background:"#111827",borderRadius:12,padding:16,marginBottom:12,border:"1px solid #ffffff0d"}}>
-            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:12}}>动态天赋（技术特点）</div>
+            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:12}}>{t("player.body_dynamic", lang)}</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {ph.dynamicTraits.map((t,i)=>(
                 <div key={i} style={{background:ac+"22",borderRadius:20,padding:"6px 14px",fontSize:12,color:ac,border:"1px solid "+ac+"33"}}>{t}</div>
               ))}
             </div>
-            <div style={{fontSize:11,color:"#555",marginTop:10}}>动态天赋会影响比赛模拟中的数据加成</div>
+            <div style={{fontSize:11,color:"#555",marginTop:10}}>{t("player.dynamic_note", lang)}</div>
           </div>
 
           {/* Injury history */}
           {injuryLog.length>0 && (
             <div style={{background:"#111827",borderRadius:12,padding:16,border:"1px solid #ffffff0d"}}>
-              <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:10}}>伤病历史</div>
+              <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:10}}>{t("player.injury_history", lang)}</div>
               {injuryLog.slice(-5).reverse().map((inj,i)=>(
                 <div key={i} style={{fontSize:12,color:inj.type==="injured"?"#ff8888":"#88ff88",padding:"6px 0",borderBottom:"1px solid #ffffff06"}}>
                   {inj.type==="injured"?"🔴":"🟢"} {inj.name} {fmtDate(inj.date)} {inj.games?"("+inj.games+"场)":"(已愈)"}
@@ -1981,23 +2007,23 @@ function MainScreen({saveId, init, onQuit}) {
           {seasonOver && phase==="regular" && (
             <div style={{background:"#0d1a2a",borderRadius:10,padding:12,marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center",border:"1px solid "+ac+"44"}}>
               <div>
-                <div style={{fontSize:13,fontWeight:700,color:ac}}>常规赛已结束</div>
-                <div style={{fontSize:11,color:"#888"}}>前往「季后赛」标签继续</div>
+                <div style={{fontSize:13,fontWeight:700,color:ac}}>{t("cal.regular_season_done", lang)}</div>
+                <div style={{fontSize:11,color:"#888"}}>{t("cal.go_playoffs", lang)}</div>
               </div>
-              <button onClick={()=>setView("playoffs")} style={{padding:"8px 16px",background:team.color,border:"1px solid "+ac,borderRadius:8,color:ac,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>→ 季后赛</button>
+              <button onClick={()=>setView("playoffs")} style={{padding:"8px 16px",background:team.color,border:"1px solid "+ac,borderRadius:8,color:ac,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>{t("cal.to_playoffs", lang)}</button>
             </div>
           )}
           {phase==="offseason" && (
             <div style={{background:"#1a1a0d",borderRadius:10,padding:12,marginBottom:10,border:"1px solid #f9a01b44"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
-                  <div style={{fontSize:13,fontWeight:700,color:"#f9a01b"}}>☀ 休赛期</div>
-                  <div style={{fontSize:11,color:"#888"}}>前往「训练」强化属性</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#f9a01b"}}>{t("cal.offseason_title", lang)}</div>
+                  <div style={{fontSize:11,color:"#888"}}>{t("cal.offseason_hint", lang)}</div>
                 </div>
                 <div style={{display:"flex",gap:8,flexDirection:"column",alignItems:"flex-end"}}>
-                  {seasonAwards && <button onClick={()=>setShowAwards(true)} style={{padding:"6px 12px",background:"#ffd70022",border:"1px solid #ffd70044",borderRadius:8,color:"#ffd700",fontSize:11,cursor:"pointer",fontFamily:"sans-serif"}}>🏆 查看颁奖</button>}
-                  {offseasonDone && !freeAgent && <button onClick={startNextSeason} style={{padding:"6px 12px",background:"linear-gradient(135deg,#f9a01b,#ffd700)",border:"none",borderRadius:8,color:"#000",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"sans-serif"}}>开始 S{season+1}</button>}
-                  {freeAgent && <button onClick={()=>setContractModal(true)} style={{padding:"6px 12px",background:"#2a0d0d",border:"1px solid #ff444444",borderRadius:8,color:"#ff8888",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"sans-serif"}}>⚠ 自由球员，待签</button>}
+                  {seasonAwards && <button onClick={()=>setShowAwards(true)} style={{padding:"6px 12px",background:"#ffd70022",border:"1px solid #ffd70044",borderRadius:8,color:"#ffd700",fontSize:11,cursor:"pointer",fontFamily:"sans-serif"}}>{t("cal.see_awards", lang)}</button>}
+                  {offseasonDone && !freeAgent && <button onClick={startNextSeason} style={{padding:"6px 12px",background:"linear-gradient(135deg,#f9a01b,#ffd700)",border:"none",borderRadius:8,color:"#000",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"sans-serif"}}>{t("cal.start_next_season", lang, {n: season+1})}</button>}
+                  {freeAgent && <button onClick={()=>setContractModal(true)} style={{padding:"6px 12px",background:"#2a0d0d",border:"1px solid #ff444444",borderRadius:8,color:"#ff8888",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"sans-serif"}}>{t("cal.fa_waiting", lang)}</button>}
                 </div>
               </div>
             </div>
@@ -2015,7 +2041,7 @@ function MainScreen({saveId, init, onQuit}) {
             <button onClick={nextMonth} style={{background:"#111827",border:"1px solid #ffffff22",color:"#fff",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"sans-serif"}}>›</button>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",marginBottom:3}}>
-            {["日","一","二","三","四","五","六"].map(d=>(
+            {t("cal.weekdays", lang).split(",").map(d=>(
               <div key={d} style={{textAlign:"center",fontSize:10,color:"#444",padding:"3px 0"}}>{d}</div>
             ))}
           </div>
@@ -2071,12 +2097,12 @@ function MainScreen({saveId, init, onQuit}) {
           )}
           {played.length>0 && (
             <div style={{marginTop:12}}>
-              <div style={{fontSize:11,color:"#555",letterSpacing:1,marginBottom:6}}>最近比赛</div>
+              <div style={{fontSize:11,color:"#555",letterSpacing:1,marginBottom:6}}>{t("cal.recent", lang)}</div>
               {played.slice(-4).reverse().map((g,i)=>(
                 <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#111827",borderRadius:8,marginBottom:5,border:"1px solid "+(g.status==="won"?"#00ff8818":"#ff44441a")}}>
                   <div style={{fontSize:12,fontWeight:700,color:g.status==="won"?"#00ff88":"#ff5555",minWidth:16}}>{g.status==="won"?"W":"L"}</div>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:12,color:"#ccc"}}>vs {g.opp}{g.stats?.rested&&<span style={{color:"#88aaff",fontSize:10}}> 休战</span>}{g.stats?.injured&&<span style={{color:"#ff8888",fontSize:10}}> 🤕</span>}</div>
+                    <div style={{fontSize:12,color:"#ccc"}}>vs {g.opp}{g.stats?.rested&&<span style={{color:"#88aaff",fontSize:10}}> {t("cal.rested_marker", lang)}</span>}{g.stats?.injured&&<span style={{color:"#ff8888",fontSize:10}}> 🤕</span>}</div>
                     <div style={{fontSize:10,color:"#555"}}>{fmtDate(g.date)} {g.home?"主场":"客场"}</div>
                   </div>
                   {g.stats && !g.stats.rested && <div style={{display:"flex",gap:7,fontSize:12}}><span style={{color:ac}}>{g.stats.pts}分</span><span style={{color:"#666"}}>{g.stats.ast}助</span><span style={{color:"#666"}}>{g.stats.reb}篮</span></div>}
@@ -2091,36 +2117,36 @@ function MainScreen({saveId, init, onQuit}) {
       {view==="stats" && (
         <div style={{padding:14}}>
           <div style={{background:"#111827",borderRadius:12,padding:16,marginBottom:12,border:"1px solid #ffffff0d"}}>
-            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:4}}>综合能力</div>
+            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:4}}>{t("stats.overall", lang)}</div>
             <div style={{fontSize:50,fontWeight:900,color:ac,lineHeight:1}}>{player.overall}</div>
             <div style={{fontSize:12,color:"#555"}}>OVR · {player.archetype} · S{season}</div>
           </div>
           <div style={{background:"#111827",borderRadius:12,padding:16,marginBottom:12,border:"1px solid #ffffff0d"}}>
-            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:12}}>属性 & 潜力上限</div>
+            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:12}}>{t("stats.attr_and_ceiling", lang)}</div>
             {Object.entries(player.stats).map(([k,v])=>{
               const eff = injury&&injury.affectedStats.includes(k)?Math.max(28,Math.round(v*0.68)):v;
               return (
                 <div key={k}>
-                  <StatBar label={STAT_LABELS[k]} value={eff} ceiling={player.ceiling[k]} max={99} color={injury&&injury.affectedStats.includes(k)?"#ff6b6b":ac}/>
-                  {injury&&injury.affectedStats.includes(k) && <div style={{fontSize:10,color:"#ff8888",marginTop:-6,marginBottom:6}}>🤕 伤病影响（原 {v}）</div>}
+                  <StatBar label={tx(STAT_LABELS[k], lang)} value={eff} ceiling={player.ceiling[k]} max={99} color={injury&&injury.affectedStats.includes(k)?"#ff6b6b":ac}/>
+                  {injury&&injury.affectedStats.includes(k) && <div style={{fontSize:10,color:"#ff8888",marginTop:-6,marginBottom:6}}>🤕 {t("stats.injury_orig", lang, {v: v})}</div>}
                 </div>
               );
             })}
-            <div style={{fontSize:10,color:"#333",marginTop:6}}>灰色区域 = 个人潜力上限</div>
+            <div style={{fontSize:10,color:"#333",marginTop:6}}>{t("stats.ceiling_note", lang)}</div>
           </div>
           <div style={{background:"#111827",borderRadius:12,padding:16,marginBottom:12,border:"1px solid #ffffff0d"}}>
-            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:10}}>本赛季场均</div>
-            {played.filter(g=>!g.stats?.rested).length===0 ? <div style={{fontSize:13,color:"#444",textAlign:"center",padding:"12px 0"}}>还没有出场记录</div> :
+            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:10}}>{t("stats.season_avg", lang)}</div>
+            {played.filter(g=>!g.stats?.rested).length===0 ? <div style={{fontSize:13,color:"#444",textAlign:"center",padding:"12px 0"}}>{t("stats.no_records", lang)}</div> :
               [["得分",avg.pts,40],["助攻",avg.ast,15],["篮板",avg.reb,20],["抢断",avg.stl,5],["盖帽",avg.blk,5]].map(([l,v,m])=>(<StatBar key={l} label={l} value={v} max={m} color={ac}/>))}
           </div>
           <div style={{background:"#111827",borderRadius:12,padding:16,border:"1px solid #ffffff0d"}}>
-            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:10}}>提高空间分析</div>
+            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:10}}>{t("stats.growth_room", lang)}</div>
             {Object.entries(player.stats).map(([k,v])=>{
               const cap=player.ceiling[k], gap=cap-v;
               const lbl=gap>20?"🔴 重点提升":gap>10?"🟡 有空间":"🟢 接近上限";
               return (
                 <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"1px solid #ffffff06"}}>
-                  <span style={{fontSize:13,color:"#ccc"}}>{STAT_LABELS[k]}</span>
+                  <span style={{fontSize:13,color:"#ccc"}}>{tx(STAT_LABELS[k], lang)}</span>
                   <div style={{display:"flex",gap:8,alignItems:"center"}}>
                     <span style={{fontSize:13,fontWeight:700,color:ac}}>{v}</span>
                     <span style={{fontSize:11,color:"#444"}}>→</span>
@@ -2141,7 +2167,7 @@ function MainScreen({saveId, init, onQuit}) {
             <div>
               <div style={{background:"#111827",borderRadius:12,padding:14,marginBottom:14,border:"1px solid #ffffff0d"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div><div style={{fontSize:14,fontWeight:700}}>训练点数</div><div style={{fontSize:11,color:"#555",marginTop:2}}>每点 +2属性 · 本赛季总额 {maxTrainPoints} 点</div></div>
+                  <div><div style={{fontSize:14,fontWeight:700}}>{t("training.points_title", lang)}</div><div style={{fontSize:11,color:"#555",marginTop:2}}>{t("training.points_note", lang, {n: maxTrainPoints})}</div></div>
                   <div style={{fontSize:28,fontWeight:900,color:ac}}>{maxTrainPoints-totalAlloc}</div>
                 </div>
               </div>
@@ -2151,8 +2177,8 @@ function MainScreen({saveId, init, onQuit}) {
                 return (
                   <div key={opt.id} style={{background:"#111827",borderRadius:12,padding:14,marginBottom:10,border:"1px solid "+(alloc>0?ac+"44":"#ffffff0d"),opacity:atCap?0.4:1}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                      <div><div style={{fontSize:14,fontWeight:700}}>{opt.icon} {opt.label}</div><div style={{fontSize:11,color:"#555",marginTop:2}}>{opt.desc}{atCap?" · 已达上限":""}</div></div>
-                      <div style={{textAlign:"right"}}><div style={{fontSize:11,color:"#666"}}>{STAT_LABELS[opt.stat]} /{cap}</div><div style={{fontSize:15,fontWeight:700,color:alloc>0?"#00ff88":ac}}>{cur}{alloc>0&&<span style={{fontSize:12,color:"#00ff88"}}> → {proj}</span>}</div></div>
+                      <div><div style={{fontSize:14,fontWeight:700}}>{opt.icon} {tx(otx(pt.label, lang), lang)}</div><div style={{fontSize:11,color:"#555",marginTop:2}}>{tx(opt.desc, lang)}{atCap?" · 已达上限":""}</div></div>
+                      <div style={{textAlign:"right"}}><div style={{fontSize:11,color:"#666"}}>{tx(STAT_LABELS[opt.stat], lang)} /{cap}</div><div style={{fontSize:15,fontWeight:700,color:alloc>0?"#00ff88":ac}}>{cur}{alloc>0&&<span style={{fontSize:12,color:"#00ff88"}}> → {proj}</span>}</div></div>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
                       <button onClick={()=>allocTrain(opt.stat,-1)} disabled={alloc===0||atCap}
@@ -2168,24 +2194,24 @@ function MainScreen({saveId, init, onQuit}) {
               {/* B22: always enabled — when totalAlloc===0 the button skips training. */}
               <button onClick={confirmTraining}
                 style={{width:"100%",padding:"15px 0",fontSize:15,fontWeight:700,background:"linear-gradient(135deg,#f9a01b,#ffd700)",border:"none",borderRadius:12,color:"#000",cursor:"pointer",fontFamily:"sans-serif",marginTop:4}}>
-                {totalAlloc>0?"确认训练计划":"跳过训练，开始新赛季"}
+                {totalAlloc>0?t("training.confirm", lang):t("training.skip_and_start", lang)}
               </button>
             </div>
           ) : offseasonDone ? (
             <div>
               <div style={{background:"#1a2a1a",borderRadius:12,padding:20,border:"1px solid #00ff8844",textAlign:"center",marginBottom:14}}>
                 <div style={{fontSize:24,marginBottom:8}}>✅</div>
-                <div style={{fontSize:15,fontWeight:700,color:"#00ff88"}}>训练已完成 · OVR {player.overall}</div>
-                <div style={{fontSize:13,color:"#888",marginTop:6}}>返回赛程页开始新赛季</div>
+                <div style={{fontSize:15,fontWeight:700,color:"#00ff88"}}>{t("training.completed", lang, {ovr: player.overall})}</div>
+                <div style={{fontSize:13,color:"#888",marginTop:6}}>{t("training.go_calendar", lang)}</div>
               </div>
               {/* D5: retire button */}
               <button onClick={()=>setRetireModal(true)} style={{width:"100%",padding:"12px 0",background:"#2a0d0d",border:"1px solid #ff444444",borderRadius:10,color:"#ff8888",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"sans-serif"}}>
-                🏁 宣布退役
+                {t("training.retire", lang)}
               </button>
             </div>
           ) : (
             <div style={{background:"#1a1a0d",borderRadius:12,padding:20,textAlign:"center",border:"1px solid #f9a01b44"}}>
-              <div style={{fontSize:14,color:"#f9a01b"}}>⏳ 休赛期训练在赛季结束后开放</div>
+              <div style={{fontSize:14,color:"#f9a01b"}}>{t("training.closed_during_season", lang)}</div>
             </div>
           )}
         </div>
@@ -2194,7 +2220,7 @@ function MainScreen({saveId, init, onQuit}) {
       {/* ════ RELATIONS ════ */}
       {view==="relations" && (
         <div style={{padding:14}}>
-          <div style={{fontSize:11,color:"#888",letterSpacing:2,marginBottom:12}}>管理层关系</div>
+          <div style={{fontSize:11,color:"#888",letterSpacing:2,marginBottom:12}}>{t("rel.title", lang)}</div>
           {PERSON_TYPES.map(pt=>{
             const val=relationships[pt.key];
             const q=val>=70?"融洽":val>=45?"一般":"紧张";
@@ -2202,18 +2228,18 @@ function MainScreen({saveId, init, onQuit}) {
             return (
               <div key={pt.key} style={{background:"#111827",borderRadius:12,padding:14,marginBottom:10,border:"1px solid "+(val<30?"#ff444444":"#ffffff0d")}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                  <div><div style={{fontSize:15,fontWeight:700}}>{pt.icon} {pt.label}</div><div style={{fontSize:11,color:col,marginTop:2}}>{q} · {val}/100</div></div>
+                  <div><div style={{fontSize:15,fontWeight:700}}>{pt.icon} {tx(pt.label, lang)}</div><div style={{fontSize:11,color:col,marginTop:2}}>{q} · {val}/100</div></div>
                   <button onClick={async()=>{setRelModal(pt.key);if(!relStory[pt.key])await loadRelStory(pt.key);}}
-                    style={{padding:"6px 12px",background:"#1a1a2e",border:"1px solid "+ac+"44",borderRadius:8,color:ac,fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>详情</button>
+                    style={{padding:"6px 12px",background:"#1a1a2e",border:"1px solid "+ac+"44",borderRadius:8,color:ac,fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>{t("rel.detail", lang)}</button>
                 </div>
                 <div style={{height:6,background:"#1a1a2e",borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:val+"%",background:col,borderRadius:3,transition:"width 0.5s"}}/></div>
-                {val<30 && <div style={{fontSize:11,color:"#ff6b6b",marginTop:6}}>⚠ 关系极差，可能被交易</div>}
+                {val<30 && <div style={{fontSize:11,color:"#ff6b6b",marginTop:6}}>{t("rel.very_bad", lang)}</div>}
               </div>
             );
           })}
 
           {/* Teammates */}
-          <div style={{fontSize:11,color:"#888",letterSpacing:2,marginBottom:10,marginTop:4}}>队友关系</div>
+          <div style={{fontSize:11,color:"#888",letterSpacing:2,marginBottom:10,marginTop:4}}>{t("rel.teammates_title", lang)}</div>
           {teammates.map((tm,i)=>{
             const col=tm.rapport>=70?"#00ff88":tm.rapport>=45?"#f9a01b":"#ff5555";
             const q=tm.rapport>=70?"兄弟":tm.rapport>=45?"普通":"不和";
@@ -2222,7 +2248,7 @@ function MainScreen({saveId, init, onQuit}) {
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                   <div>
                     <div style={{fontSize:13,fontWeight:700}}>🏀 {tm.name}</div>
-                    <div style={{fontSize:11,color:"#555"}}>{tm.role} · OVR {tm.ovr}</div>
+                    <div style={{fontSize:11,color:"#555"}}>{tx(tm.role, lang)} · OVR {tm.ovr}</div>
                   </div>
                   <div style={{textAlign:"right"}}>
                     <div style={{fontSize:12,color:col,fontWeight:700}}>{q}</div>
@@ -2238,14 +2264,14 @@ function MainScreen({saveId, init, onQuit}) {
 
           {/* Trade request */}
           <div style={{background:"#111827",borderRadius:12,padding:14,marginTop:4,border:"1px solid #ffffff0d"}}>
-            <div style={{fontSize:14,fontWeight:700,marginBottom:4}}>申请交易</div>
-            <div style={{fontSize:12,color:"#666",marginBottom:10}}>主动申请（GM -10，老板 -8）</div>
+            <div style={{fontSize:14,fontWeight:700,marginBottom:4}}>{t("rel.trade_title", lang)}</div>
+            <div style={{fontSize:12,color:"#666",marginBottom:10}}>{t("rel.trade_note", lang)}</div>
             {tradeResult ? (
               <div>
                 <div style={{background:"#0f1923",borderRadius:10,padding:12,borderLeft:"4px solid #f9a01b",marginBottom:10}}>
                   <div style={{fontSize:13,color:"#ddd",lineHeight:1.6}}>{tradeResult}</div>
                 </div>
-                <button onClick={()=>setTradeResult(null)} style={{padding:"6px 14px",background:"#333",border:"none",borderRadius:8,color:"#aaa",fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>关闭</button>
+                <button onClick={()=>setTradeResult(null)} style={{padding:"6px 14px",background:"#333",border:"none",borderRadius:8,color:"#aaa",fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>{t("app.close", lang)}</button>
               </div>
             ) : (
               <button onClick={doRequestTrade} disabled={tradeLoading}
@@ -2261,38 +2287,38 @@ function MainScreen({saveId, init, onQuit}) {
       {view==="agent" && (
         <div style={{padding:14}}>
           <div style={{background:"#111827",borderRadius:12,padding:16,marginBottom:14,border:"1px solid #ffffff0d"}}>
-            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:10}}>当前合同</div>
+            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:10}}>{t("agent.contract_now", lang)}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div>
                 <div style={{fontSize:22,fontWeight:700,color:ac}}>${contract.salary}M / 年</div>
                 <div style={{fontSize:12,color:"#666"}}>{contract.type==="rookie"?"新秀合同":"标准合同"} · 第{contract.year}/{contract.totalYears}年</div>
               </div>
-              <div style={{textAlign:"right"}}><div style={{fontSize:13,color:"#888"}}>剩余 {Math.max(0,contract.totalYears-contract.year)} 年</div></div>
+              <div style={{textAlign:"right"}}><div style={{fontSize:13,color:"#888"}}>{t("agent.years_left", lang, {n: Math.max(0, contract.totalYears - contract.year)})}</div></div>
             </div>
             {contract.year>=contract.totalYears && !contractOffer && (
               <button onClick={()=>{const base=Math.max(8,Math.round((player.overall-60)*0.9+season*0.5));const yrs=Math.floor(Math.random()*3)+2;setContractOffer({salary:base,years:yrs});setContractModal(true);}}
                 style={{width:"100%",marginTop:12,padding:"10px 0",background:team.color,border:"1px solid "+ac,borderRadius:10,color:ac,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"sans-serif"}}>
-                💼 开始续约谈判
+                {t("agent.start_extension", lang)}
               </button>
             )}
           </div>
-          <div style={{fontSize:11,color:"#888",letterSpacing:2,marginBottom:10}}>品牌合作</div>
+          <div style={{fontSize:11,color:"#888",letterSpacing:2,marginBottom:10}}>{t("agent.brand_collab", lang)}</div>
           {brands.length===0 ? (
             <div style={{background:"#111827",borderRadius:12,padding:20,textAlign:"center",color:"#444",marginBottom:12}}>
               <div style={{fontSize:28,marginBottom:8}}>📦</div>
-              <div>还没有品牌合作</div>
-              <div style={{fontSize:12,marginTop:4}}>打出成绩，经纪人自然会带来好消息</div>
+              <div>{t("agent.no_brand", lang)}</div>
+              <div style={{fontSize:12,marginTop:4}}>{t("agent.brand_hint", lang)}</div>
             </div>
           ) : brands.map((b,i)=>(
             <div key={i} style={{background:"#111827",borderRadius:12,padding:14,marginBottom:10,border:"1px solid #ffffff0d",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div><div style={{fontSize:14,fontWeight:700}}>{b.icon} {b.name}</div><div style={{fontSize:12,color:"#888"}}>{b.type}</div></div>
+              <div><div style={{fontSize:14,fontWeight:700}}>{b.icon} {b.name}</div><div style={{fontSize:12,color:"#888"}}>{tx(b.type, lang)}</div></div>
               <div style={{fontSize:16,fontWeight:700,color:"#00ff88"}}>${b.offer}M/年</div>
             </div>
           ))}
           <div style={{background:"#0f1923",borderRadius:10,padding:14,border:"1px solid #ffffff0d"}}>
-            <div style={{fontSize:11,color:"#888",marginBottom:6}}>年度总收入</div>
+            <div style={{fontSize:11,color:"#888",marginBottom:6}}>{t("agent.annual_income", lang)}</div>
             <div style={{fontSize:22,fontWeight:700,color:"#ffd700"}}>${(contract.salary+brands.reduce((a,b)=>a+b.offer,0)).toFixed(1)}M</div>
-            <div style={{fontSize:11,color:"#555"}}>合同 ${contract.salary}M + 代言 ${brands.reduce((a,b)=>a+b.offer,0).toFixed(1)}M</div>
+            <div style={{fontSize:11,color:"#555"}}>{t("agent.contract_endorsement_breakdown", lang, {c: contract.salary, b: brands.reduce((a:number,b:any)=>a+b.offer,0).toFixed(1)})}</div>
           </div>
         </div>
       )}
@@ -2302,28 +2328,28 @@ function MainScreen({saveId, init, onQuit}) {
         <div style={{padding:14}}>
           {/* Net worth summary */}
           <div style={{background:"#111827",borderRadius:12,padding:16,marginBottom:12,border:"1px solid #ffffff0d"}}>
-            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:4}}>个人财产</div>
+            <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:4}}>{t("fin.personal_wealth", lang)}</div>
             <div style={{fontSize:38,fontWeight:900,color:"#ffd700"}}>${savings.toFixed(2)}M</div>
-            <div style={{fontSize:12,color:"#555",marginTop:2}}>储蓄 · 税后收入每赛季自动入账</div>
-            {currentRental && <div style={{fontSize:11,color:"#f9a01b",marginTop:4}}>🏠 租房中：{currentRental.name} · ${(currentRental.monthly*12).toFixed(2)}M/年 · 剩余 {currentRental.monthsLeft||12} 个月</div>}
-            {ownedHouse && <div style={{fontSize:11,color:"#00ff88",marginTop:4}}>🏡 已购房：{ownedHouse.name}（{ownedHouse.city}）</div>}
+            <div style={{fontSize:12,color:"#555",marginTop:2}}>{t("fin.savings_note", lang)}</div>
+            {currentRental && <div style={{fontSize:11,color:"#f9a01b",marginTop:4}}>{t("fin.renting", lang, {name: tx(currentRental.name, lang), cost: (currentRental.monthly*12).toFixed(2), n: currentRental.monthsLeft||12})}</div>}
+            {ownedHouse && <div style={{fontSize:11,color:"#00ff88",marginTop:4}}>{t("fin.owned_house", lang, {name: tx(ownedHouse.name, lang), city: ownedHouse.city})}</div>}
           </div>
 
           {/* Housing */}
-          <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:8}}>住房</div>
+          <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:8}}>{t("fin.housing", lang)}</div>
           <div style={{background:"#111827",borderRadius:12,padding:14,marginBottom:12,border:"1px solid #ffffff0d"}}>
-            <div style={{fontSize:12,color:"#666",marginBottom:10}}>当前城市：{team.city}</div>
+            <div style={{fontSize:12,color:"#666",marginBottom:10}}>{t("fin.current_city", lang, {city: teamCity(team.abbr, lang)})}</div>
             {!ownedHouse && (
               <div style={{marginBottom:10}}>
-                <div style={{fontSize:11,color:"#f9a01b",marginBottom:6}}>租房选项（每年扣除）</div>
+                <div style={{fontSize:11,color:"#f9a01b",marginBottom:6}}>{t("fin.rent_options", lang)}</div>
                 {RENT_OPTIONS.map(r=>{
                   const isRenting = currentRental?.id===r.id;
                   const canAfford = savings >= r.monthly;
                   return (
                     <div key={r.id} style={{background:isRenting?"#1a2a0d":"#0d1117",borderRadius:8,padding:"10px 12px",marginBottom:6,border:"1px solid "+(isRenting?"#00ff8844":"#ffffff0d"),display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                       <div>
-                        <div style={{fontSize:13,color:isRenting?"#00ff88":"#ccc"}}>{r.icon} {r.name}</div>
-                        <div style={{fontSize:10,color:"#555"}}>{r.desc} · ${(r.monthly*12).toFixed(2)}M/年</div>
+                        <div style={{fontSize:13,color:isRenting?"#00ff88":"#ccc"}}>{r.icon} {tx(r.name, lang)}</div>
+                        <div style={{fontSize:10,color:"#555"}}>{t("fin.rent_per_year", lang, {desc: tx(r.desc, lang), cost: (r.monthly*12).toFixed(2)})}</div>
                       </div>
                       <button onClick={()=>{
                         if(isRenting) {
@@ -2331,30 +2357,30 @@ function MainScreen({saveId, init, onQuit}) {
                         } else {
                           // D11: prepay 12 months upfront. Auto-renew at season end if affordable.
                           const cost = +(r.monthly * 12).toFixed(2);
-                          if(savings < cost) { alert("资金不足，需要 $"+cost+"M 才能预付一年租金"); return; }
+                          if(savings < cost) { alert(t("fin.cant_afford_year", lang, {n: cost})); return; }
                           setSavings((s: number) => +(s - cost).toFixed(2));
                           setCurrentRental({...r, monthsLeft: 12, prepaid: cost});
                         }
                       }} style={{padding:"5px 12px",background:isRenting?"#2a0d0d":"#1a2a1a",border:"1px solid "+(isRenting?"#ff444444":"#00ff8844"),borderRadius:8,color:isRenting?"#ff8888":"#00ff88",fontSize:11,cursor:"pointer",fontFamily:"sans-serif"}}>
-                        {isRenting?"退租":"租房 (预付1年)"}
+                        {isRenting?t("fin.unrent", lang):t("fin.rent", lang)}
                       </button>
                     </div>
                   );
                 })}
               </div>
             )}
-            <div style={{fontSize:11,color:"#f9a01b",marginBottom:6}}>购房（{team.city}）</div>
+            <div style={{fontSize:11,color:"#f9a01b",marginBottom:6}}>{t("fin.buy_in_city", lang, {city: teamCity(team.abbr, lang)})}</div>
             {HOUSES.map(h=>{
               const affordable = savings >= h.price;
               const isOwned = ownedHouse?.id===h.id;
               return (
                 <div key={h.id} style={{background:isOwned?"#1a2a0d":"#0d1117",borderRadius:8,padding:"10px 12px",marginBottom:6,border:"1px solid "+(isOwned?"#00ff8844":affordable?"#ffffff11":"#ffffff05"),display:"flex",justifyContent:"space-between",alignItems:"center",opacity:affordable||isOwned?1:0.5}}>
                   <div>
-                    <div style={{fontSize:13,color:isOwned?"#00ff88":affordable?"#ccc":"#555"}}>{h.icon} {h.name}</div>
-                    <div style={{fontSize:10,color:"#555"}}>{h.desc} · ${h.price}M</div>
+                    <div style={{fontSize:13,color:isOwned?"#00ff88":affordable?"#ccc":"#555"}}>{h.icon} {tx(h.name, lang)}</div>
+                    <div style={{fontSize:10,color:"#555"}}>{tx(h.desc, lang)} · ${h.price}M</div>
                   </div>
                   {isOwned ? (
-                    <button onClick={()=>{setSavings(prev=>+(prev+h.price*0.85).toFixed(2));setOwnedHouse(null);}} style={{padding:"5px 10px",background:"#2a0d0d",border:"1px solid #ff444444",borderRadius:8,color:"#ff8888",fontSize:10,cursor:"pointer",fontFamily:"sans-serif"}}>卖出</button>
+                    <button onClick={()=>{setSavings(prev=>+(prev+h.price*0.85).toFixed(2));setOwnedHouse(null);}} style={{padding:"5px 10px",background:"#2a0d0d",border:"1px solid #ff444444",borderRadius:8,color:"#ff8888",fontSize:10,cursor:"pointer",fontFamily:"sans-serif"}}>{t("fin.sell", lang)}</button>
                   ) : (
                     <button disabled={!affordable} onClick={()=>{setSavings(prev=>+(prev-h.price).toFixed(2));setOwnedHouse({...h,city:team.city});setCurrentRental(null);}} style={{padding:"5px 10px",background:affordable?"#1a2a1a":"#111",border:"1px solid "+(affordable?"#00ff8844":"#ffffff05"),borderRadius:8,color:affordable?"#00ff88":"#333",fontSize:11,cursor:affordable?"pointer":"not-allowed",fontFamily:"sans-serif"}}>
                       {affordable?"购买":"资金不足"}
@@ -2366,15 +2392,15 @@ function MainScreen({saveId, init, onQuit}) {
           </div>
 
           {/* Cars */}
-          <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:8}}>车辆</div>
+          <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:8}}>{t("fin.car_label", lang)}</div>
           <div style={{background:"#111827",borderRadius:12,padding:14,marginBottom:12,border:"1px solid #ffffff0d"}}>
             {ownedCars.length>0 && (
               <div style={{marginBottom:10}}>
-                <div style={{fontSize:11,color:"#888",marginBottom:6}}>已拥有</div>
+                <div style={{fontSize:11,color:"#888",marginBottom:6}}>{t("fin.owned_cars", lang)}</div>
                 {ownedCars.map((c,i)=>(
                   <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #ffffff06"}}>
-                    <div style={{fontSize:13,color:"#00ff88"}}>{c.icon} {c.name}</div>
-                    <button onClick={()=>{setSavings(prev=>+(prev+c.price*0.7).toFixed(2));setOwnedCars(prev=>prev.filter((_,j)=>j!==i));}} style={{padding:"4px 10px",background:"#2a0d0d",border:"1px solid #ff444422",borderRadius:6,color:"#ff8888",fontSize:10,cursor:"pointer",fontFamily:"sans-serif"}}>卖出</button>
+                    <div style={{fontSize:13,color:"#00ff88"}}>{c.icon} {tx(c.name, lang)}</div>
+                    <button onClick={()=>{setSavings(prev=>+(prev+c.price*0.7).toFixed(2));setOwnedCars(prev=>prev.filter((_,j)=>j!==i));}} style={{padding:"4px 10px",background:"#2a0d0d",border:"1px solid #ff444422",borderRadius:6,color:"#ff8888",fontSize:10,cursor:"pointer",fontFamily:"sans-serif"}}>{t("fin.sell", lang)}</button>
                   </div>
                 ))}
               </div>
@@ -2386,8 +2412,8 @@ function MainScreen({saveId, init, onQuit}) {
               return (
                 <div key={c.id} style={{background:"#0d1117",borderRadius:8,padding:"10px 12px",marginBottom:6,border:"1px solid "+(affordable?"#ffffff11":"#ffffff05"),display:"flex",justifyContent:"space-between",alignItems:"center",opacity:affordable?1:0.5}}>
                   <div>
-                    <div style={{fontSize:13,color:affordable?"#ccc":"#555"}}>{c.icon} {c.name}</div>
-                    <div style={{fontSize:10,color:"#555"}}>{c.desc} · ${c.price}M</div>
+                    <div style={{fontSize:13,color:affordable?"#ccc":"#555"}}>{c.icon} {tx(c.name, lang)}</div>
+                    <div style={{fontSize:10,color:"#555"}}>{tx(c.desc, lang)} · ${c.price}M</div>
                   </div>
                   <button disabled={!affordable} onClick={()=>{setOwnedCars(prev=>{if(prev.find(x=>x.id===c.id))return prev;setSavings(s=>+(s-c.price).toFixed(2));return [...prev,c];});}} style={{padding:"5px 12px",background:affordable?"#1a2a1a":"#111",border:"1px solid "+(affordable?"#00ff8844":"#ffffff05"),borderRadius:8,color:affordable?"#00ff88":"#333",fontSize:11,cursor:affordable?"pointer":"not-allowed",fontFamily:"sans-serif"}}>
                     {affordable?"购买":"资金不足"}
@@ -2405,12 +2431,12 @@ function MainScreen({saveId, init, onQuit}) {
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
           <div style={{background:"#111827",borderRadius:16,padding:24,width:"100%",maxWidth:380,border:"1px solid #ff444444"}}>
             <div style={{fontSize:36,textAlign:"center",marginBottom:12}}>🏁</div>
-            <div style={{fontSize:17,fontWeight:800,marginBottom:8,textAlign:"center"}}>宣布退役？</div>
+            <div style={{fontSize:17,fontWeight:800,marginBottom:8,textAlign:"center"}}>{t("retire.confirm_title", lang)}</div>
             <div style={{fontSize:13,color:"#aaa",lineHeight:1.7,marginBottom:20}}>
-              {player.name} · {player.age} 岁 · 共 {season} 个赛季<br/>
-              生涯 OVR: {player.overall}<br/>
-              {seasonAwards && (seasonAwards.iChampion ? "✨ 至少 1 次总冠军" : "")}<br/>
-              <span style={{color:"#ff8888"}}>退役后将无法继续这个存档。建议先 ⬇备份。</span>
+              {t("retire.confirm_subtitle", lang, {name: player.name, age: player.age, n: season})}<br/>
+              {t("retire.career_ovr", lang, {ovr: player.overall})}<br/>
+              {seasonAwards && seasonAwards.iChampion ? t("retire.champ_note", lang) : ""}<br/>
+              <span style={{color:"#ff8888"}}>{t("retire.warn_backup", lang)}</span>
             </div>
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>{setRetired(true); setRetireModal(false); doSave();}}
@@ -2429,33 +2455,33 @@ function MainScreen({saveId, init, onQuit}) {
       {dayModal && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200}} onClick={()=>setDayModal(null)}>
           <div style={{background:"#111827",borderRadius:"18px 18px 0 0",padding:24,width:"100%",maxWidth:460}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:14,fontWeight:700,marginBottom:6}}>{(calMonth+1)+"月"+dayModal.day+"日"}</div>
+            <div style={{fontSize:14,fontWeight:700,marginBottom:6}}>{t("cal.day_month", lang, {m: calMonth+1, d: dayModal.day})}</div>
             {dayModal.game ? (
               <div style={{marginBottom:14}}>
-                <div style={{fontSize:13,color:ac,marginBottom:4}}>{dayModal.game.home?"主场":"客场"} vs {dayModal.game.opp}</div>
-                {dayModal.game.status!=="upcoming" && <div style={{fontSize:12,color:dayModal.game.status==="won"?"#00ff88":"#ff5555"}}>{dayModal.game.status==="won"?"✅ 胜":"❌ 负"}{dayModal.game.stats&&!dayModal.game.stats.rested?" · "+dayModal.game.stats.pts+"分 "+dayModal.game.stats.ast+"助 "+dayModal.game.stats.reb+"篮":"  休战"}</div>}
+                <div style={{fontSize:13,color:ac,marginBottom:4}}>{dayModal.game.home?t("cal.home", lang):t("cal.away", lang)} {t("cal.vs", lang)} {teamName(dayModal.game.opp, lang)}</div>
+                {dayModal.game.status!=="upcoming" && <div style={{fontSize:12,color:dayModal.game.status==="won"?"#00ff88":"#ff5555"}}>{dayModal.game.status==="won"?t("cal.win", lang):t("cal.loss", lang)}{dayModal.game.stats&&!dayModal.game.stats.rested?" · "+dayModal.game.stats.pts+"分 "+dayModal.game.stats.ast+"助 "+dayModal.game.stats.reb+"篮":" "+t("cal.rested_marker", lang)}</div>}
               </div>
-            ) : <div style={{fontSize:13,color:"#555",marginBottom:14}}>本日无比赛</div>}
+            ) : <div style={{fontSize:13,color:"#555",marginBottom:14}}>{t("cal.no_game_today", lang)}</div>}
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {dayModal.game&&dayModal.game.status==="upcoming" && (
                 <button onClick={async()=>{await simulateUpTo(dayModal.game.id);setDayModal(null);}} disabled={simming}
                   style={{width:"100%",padding:"13px 0",background:team.color,border:"2px solid "+ac,borderRadius:10,color:ac,fontWeight:700,fontSize:14,cursor:simming?"not-allowed":"pointer",fontFamily:"sans-serif"}}>
-                  ▶ 模拟到这场比赛
+                  {t("cal.sim_to_this", lang)}
                 </button>
               )}
               {calGames.filter(g=>g.status==="upcoming").length>0 && (
                 <button onClick={async()=>{const l=calGames.filter(g=>g.status==="upcoming").slice(-1)[0];if(l)await simulateUpTo(l.id);setDayModal(null);}} disabled={simming}
                   style={{width:"100%",padding:"12px 0",background:"#1a2a1a",border:"1px solid #00ff8844",borderRadius:10,color:"#00ff88",fontWeight:700,fontSize:13,cursor:simming?"not-allowed":"pointer",fontFamily:"sans-serif"}}>
-                  ▶▶ 模拟本月所有比赛
+                  {t("cal.sim_all_month", lang)}
                 </button>
               )}
               {regularGames.filter(g=>g.status==="upcoming").length>0 && (
                 <button onClick={async()=>{const l=regularGames.filter(g=>g.status==="upcoming").slice(-1)[0];if(l)await simulateUpTo(l.id);setDayModal(null);}} disabled={simming}
                   style={{width:"100%",padding:"12px 0",background:"#1a1a2e",border:"1px solid #ffffff22",borderRadius:10,color:"#888",fontSize:13,cursor:simming?"not-allowed":"pointer",fontFamily:"sans-serif"}}>
-                  ⏩ 模拟剩余所有常规赛
+                  {t("cal.sim_remaining", lang)}
                 </button>
               )}
-              <button onClick={()=>setDayModal(null)} style={{width:"100%",padding:"10px 0",background:"transparent",border:"1px solid #ffffff11",borderRadius:10,color:"#555",fontSize:13,cursor:"pointer",fontFamily:"sans-serif"}}>关闭</button>
+              <button onClick={()=>setDayModal(null)} style={{width:"100%",padding:"10px 0",background:"transparent",border:"1px solid #ffffff11",borderRadius:10,color:"#555",fontSize:13,cursor:"pointer",fontFamily:"sans-serif"}}>{t("app.close", lang)}</button>
             </div>
           </div>
         </div>
@@ -2465,17 +2491,17 @@ function MainScreen({saveId, init, onQuit}) {
       {restModal && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
           <div style={{background:"#111827",borderRadius:16,padding:24,width:"100%",maxWidth:360,border:"1px solid #88aaff44"}}>
-            <div style={{fontSize:15,fontWeight:700,marginBottom:4}}>😴 申请休战</div>
-            <div style={{fontSize:13,color:"#888",marginBottom:20}}>休战期间球队会用其他球员上场，比赛胜率略降但你的状态得到保护。</div>
-            <div style={{fontSize:11,color:"#aaa",marginBottom:8}}>休战场数</div>
+            <div style={{fontSize:15,fontWeight:700,marginBottom:4}}>{t("rest.title", lang)}</div>
+            <div style={{fontSize:13,color:"#888",marginBottom:20}}>{t("rest.body", lang)}</div>
+            <div style={{fontSize:11,color:"#aaa",marginBottom:8}}>{t("rest.input_label", lang)}</div>
             <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:24}}>
               <button onClick={()=>setRestInput(Math.max(1,restInput-1))} style={{width:40,height:40,borderRadius:10,background:"#1a1a2e",border:"1px solid #ffffff22",color:"#fff",fontSize:20,cursor:"pointer",fontFamily:"sans-serif"}}>−</button>
               <div style={{flex:1,textAlign:"center",fontSize:32,fontWeight:900,color:"#88aaff"}}>{restInput}</div>
               <button onClick={()=>setRestInput(Math.min(20,restInput+1))} style={{width:40,height:40,borderRadius:10,background:"#1a1a2e",border:"1px solid #88aaff44",color:"#88aaff",fontSize:20,cursor:"pointer",fontFamily:"sans-serif"}}>+</button>
             </div>
             <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>{setResting(restInput);setRestModal(false);}} style={{flex:1,padding:"12px 0",background:"#88aaff",border:"none",borderRadius:10,color:"#000",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"sans-serif"}}>确认休战 {restInput} 场</button>
-              <button onClick={()=>setRestModal(false)} style={{flex:1,padding:"12px 0",background:"#222",border:"none",borderRadius:10,color:"#888",fontSize:13,cursor:"pointer",fontFamily:"sans-serif"}}>取消</button>
+              <button onClick={()=>{setResting(restInput);setRestModal(false);}} style={{flex:1,padding:"12px 0",background:"#88aaff",border:"none",borderRadius:10,color:"#000",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"sans-serif"}}>{t("rest.confirm_n", lang, {n: restInput})}</button>
+              <button onClick={()=>setRestModal(false)} style={{flex:1,padding:"12px 0",background:"#222",border:"none",borderRadius:10,color:"#888",fontSize:13,cursor:"pointer",fontFamily:"sans-serif"}}>{t("app.cancel", lang)}</button>
             </div>
           </div>
         </div>
@@ -2491,7 +2517,7 @@ function MainScreen({saveId, init, onQuit}) {
             </div>
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>loadRelStory(relModal)} disabled={relLoading} style={{flex:1,padding:"10px 0",background:team.color,border:"none",borderRadius:10,color:ac,fontWeight:700,fontSize:13,cursor:relLoading?"not-allowed":"pointer",fontFamily:"sans-serif"}}>{relLoading?"加载中...":"刷新故事"}</button>
-              <button onClick={()=>setRelModal(null)} style={{flex:1,padding:"10px 0",background:"#222",border:"none",borderRadius:10,color:"#888",fontSize:13,cursor:"pointer",fontFamily:"sans-serif"}}>关闭</button>
+              <button onClick={()=>setRelModal(null)} style={{flex:1,padding:"10px 0",background:"#222",border:"none",borderRadius:10,color:"#888",fontSize:13,cursor:"pointer",fontFamily:"sans-serif"}}>{t("app.close", lang)}</button>
             </div>
           </div>
         </div>
@@ -2505,25 +2531,25 @@ function MainScreen({saveId, init, onQuit}) {
               {freeAgent?"🏀 自由球员":"合同谈判"}
             </div>
             {freeAgent && (
-              <div style={{fontSize:12,color:"#888",marginBottom:14}}>你的合同已到期，成为自由球员。选择一份合同开始新赛季。</div>
+              <div style={{fontSize:12,color:"#888",marginBottom:14}}>{t("neg.fa_intro", lang)}</div>
             )}
 
             {/* Current offer */}
             <div style={{background:"#0d1923",borderRadius:12,padding:16,marginBottom:12,border:"1px solid "+ac+"33"}}>
-              <div style={{fontSize:12,color:"#888",marginBottom:4}}>当前选中的报价</div>
-              <div style={{fontSize:13,fontWeight:700,color:contractOffer.isHome?"#f9a01b":"#ccc",marginBottom:6}}>{contractOffer.source}</div>
+              <div style={{fontSize:12,color:"#888",marginBottom:4}}>{t("neg.selected_offer", lang)}</div>
+              <div style={{fontSize:13,fontWeight:700,color:contractOffer.isHome?"#f9a01b":"#ccc",marginBottom:6}}>{teamFull(contractOffer.rivalAbbr, lang)}</div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                 <div style={{fontSize:26,fontWeight:900,color:ac}}>${contractOffer.salary}M<span style={{fontSize:12,color:"#888",fontWeight:400}}>/年</span></div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontSize:13,color:"#ccc"}}>{contractOffer.years}年</div>
-                  <div style={{fontSize:11,color:"#555"}}>总值 ${(contractOffer.salary*contractOffer.years).toFixed(0)}M</div>
+                  <div style={{fontSize:11,color:"#555"}}>{t("neg.total_value_M", lang, {total: (contractOffer.salary*contractOffer.years).toFixed(0)})}</div>
                 </div>
               </div>
               {/* Adjust salary */}
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 <button onClick={()=>setContractOffer(prev=>({...prev,salary:Math.max(1,+(prev.salary-0.5).toFixed(1))}))}
                   style={{width:34,height:34,borderRadius:8,background:"#1a1a2e",border:"1px solid #ffffff22",color:"#fff",fontSize:16,cursor:"pointer",fontFamily:"sans-serif"}}>−</button>
-                <div style={{flex:1,textAlign:"center",fontSize:11,color:"#555"}}>手动调整薪水</div>
+                <div style={{flex:1,textAlign:"center",fontSize:11,color:"#555"}}>{t("neg.adjust_salary", lang)}</div>
                 <button onClick={()=>setContractOffer(prev=>({...prev,salary:+(prev.salary+0.5).toFixed(1)}))}
                   style={{width:34,height:34,borderRadius:8,background:"#1a2a1a",border:"1px solid "+ac+"44",color:ac,fontSize:16,cursor:"pointer",fontFamily:"sans-serif"}}>+</button>
               </div>
@@ -2545,7 +2571,7 @@ function MainScreen({saveId, init, onQuit}) {
                 // D7: real negotiation — outcome depends on increase %, OVR, isHome.
                 const increase = +(Math.floor(Math.random()*3)+1).toFixed(1);
                 const maxAllowed = getMaxSalary(season);
-                const r = negotiate(contractOffer.salary, increase, !!contractOffer.isHome, player.overall, maxAllowed);
+                const r = negotiate(contractOffer.salary, increase, !!contractOffer.isHome, player.overall, maxAllowed, lang);
                 setNegotiateResult(r);
                 if(r.accepted) {
                   setContractOffer((prev: any) => ({...prev, salary: r.newSalary}));
@@ -2557,7 +2583,7 @@ function MainScreen({saveId, init, onQuit}) {
                 }
               }}
                 style={{flex:1,padding:"12px 0",background:"#1a2a1a",border:"1px solid #00ff8844",borderRadius:10,color:"#00ff88",fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>
-                📈 要价
+                {t("neg.raise", lang)}
               </button>
             </div>
 
@@ -2569,10 +2595,10 @@ function MainScreen({saveId, init, onQuit}) {
                 <button onClick={()=>setNegotiateResult(null)} style={{background:"transparent",border:"none",color:"inherit",cursor:"pointer",fontSize:14,opacity:0.6,padding:0}}>×</button>
               </div>
             )}
-            <div style={{fontSize:11,color:"#666",marginBottom:10}}>顶薪上限 ${getMaxSalary(season)}M · 联盟薪资帽 ${SALARY_CAP}M</div>
+            <div style={{fontSize:11,color:"#666",marginBottom:10}}>{t("neg.cap_note", lang, {max: getMaxSalary(season), cap: SALARY_CAP})}</div>
             {faOffers.length>0 && (
               <div>
-                <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:8}}>全联盟报价 ({faOffers.length}支球队)</div>
+                <div style={{fontSize:11,color:"#888",letterSpacing:1,marginBottom:8}}>{t("neg.league_offers", lang, {n: faOffers.length})}</div>
                 <div style={{maxHeight:220,overflowY:"auto"}}>
                   {faOffers.map((o,i)=>{
                     const tm = ALL_TEAMS.find(t=>t.abbr===o.rivalAbbr);
@@ -2583,7 +2609,7 @@ function MainScreen({saveId, init, onQuit}) {
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <div style={{width:8,height:8,borderRadius:2,background:tm?tm.color:"#333",border:"1px solid "+(tm?tm.accent:"#555"),flexShrink:0}}/>
                           <div style={{textAlign:"left"}}>
-                            <div style={{fontSize:12,color:isSelected?ac:"#ccc",fontWeight:isSelected?700:400}}>{o.source}</div>
+                            <div style={{fontSize:12,color:isSelected?ac:"#ccc",fontWeight:isSelected?700:400}}>{teamFull(o.rivalAbbr, lang)}</div>
                             <div style={{fontSize:10,color:"#555"}}>{o.years}年合同 {o.isHome?"· 原球队":""}</div>
                           </div>
                         </div>
@@ -2598,7 +2624,7 @@ function MainScreen({saveId, init, onQuit}) {
             {!freeAgent && (
               <button onClick={()=>setContractModal(false)}
                 style={{width:"100%",marginTop:10,padding:"9px 0",background:"transparent",border:"1px solid #ffffff11",borderRadius:10,color:"#555",fontSize:12,cursor:"pointer",fontFamily:"sans-serif"}}>
-                稍后决定（成为自由球员）
+                {t("neg.later", lang)}
               </button>
             )}
           </div>
@@ -2609,15 +2635,15 @@ function MainScreen({saveId, init, onQuit}) {
       {showAwards && seasonAwards && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"flex-start",justifyContent:"center",zIndex:300,padding:"20px 16px",overflowY:"auto"}}>
           <div style={{background:"#111827",borderRadius:16,padding:24,width:"100%",maxWidth:440,border:"1px solid #ffd70044"}}>
-            <div style={{fontSize:11,color:"#ffd700",letterSpacing:3,marginBottom:8}}>年度颁奖典礼</div>
-            <div style={{fontSize:22,fontWeight:900,marginBottom:20}}>第{season}赛季荣誉</div>
+            <div style={{fontSize:11,color:"#ffd700",letterSpacing:3,marginBottom:8}}>{t("awards.title", lang)}</div>
+            <div style={{fontSize:22,fontWeight:900,marginBottom:20}}>{t("awards.season_n", lang, {n: season})}</div>
 
             {[
-              {label:"常规赛MVP",icon:"🏆",value:seasonAwards.mvp},
-              {label:"最佳防守球员 (DPOY)",icon:"🛡",value:seasonAwards.dpoy},
-              {label:"总冠军球队",icon:"🏅",value:seasonAwards.champion},
-              {label:"总决赛MVP",icon:"🥇",value:seasonAwards.fmvp},
-              {label:"最佳教练",icon:"📋",value:seasonAwards.bestCoach},
+              {label:t("awards.mvp", lang),icon:"🏆",value:seasonAwards.mvp},
+              {label:t("awards.dpoy", lang),icon:"🛡",value:seasonAwards.dpoy},
+              {label:t("awards.champion", lang),icon:"🏅",value:seasonAwards.champion},
+              {label:t("awards.fmvp", lang),icon:"🥇",value:seasonAwards.fmvp},
+              {label:t("awards.best_coach", lang),icon:"📋",value:seasonAwards.bestCoach},
             ].map(a=>{
               const isMe = a.value===player.name;
               const isMyTeam = a.label==="总冠军球队" && seasonAwards.iChampion;
@@ -2630,13 +2656,13 @@ function MainScreen({saveId, init, onQuit}) {
             })}
 
             {[
-              {label:"年度最佳阵容一队",members:seasonAwards.allNBA1},
-              {label:"年度最佳阵容二队",members:seasonAwards.allNBA2},
-              {label:"年度最佳阵容三队",members:seasonAwards.allNBA3},
-              {label:"最佳防守阵容一队",members:seasonAwards.allDef1},
-              {label:"最佳防守阵容二队",members:seasonAwards.allDef2},
-              {label:"最佳新秀阵容一队",members:seasonAwards.allRookie1},
-              {label:"最佳新秀阵容二队",members:seasonAwards.allRookie2},
+              {label:t("awards.all_nba_1", lang),members:seasonAwards.allNBA1},
+              {label:t("awards.all_nba_2", lang),members:seasonAwards.allNBA2},
+              {label:t("awards.all_nba_3", lang),members:seasonAwards.allNBA3},
+              {label:t("awards.all_def_1", lang),members:seasonAwards.allDef1},
+              {label:t("awards.all_def_2", lang),members:seasonAwards.allDef2},
+              {label:t("awards.all_rookie_1", lang),members:seasonAwards.allRookie1},
+              {label:t("awards.all_rookie_2", lang),members:seasonAwards.allRookie2},
             ].map(a=>{
               const hasMe = a.members.includes(player.name);
               return (
@@ -2653,7 +2679,7 @@ function MainScreen({saveId, init, onQuit}) {
 
             <button onClick={()=>setShowAwards(false)}
               style={{width:"100%",marginTop:20,padding:"13px 0",background:"linear-gradient(135deg,#f9a01b,#ffd700)",border:"none",borderRadius:12,color:"#000",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"sans-serif"}}>
-              关闭颁奖典礼
+              {t("awards.close", lang)}
             </button>
           </div>
         </div>
@@ -2668,6 +2694,11 @@ export default function App() {
   const [pendingPlayer, setPendingPlayer] = useState(null);
   const [activeSaveId, setActiveSaveId] = useState(null);
   const [activeInit, setActiveInit] = useState(null);
+  // i18n: language is global to the app; persists in localStorage
+  const [lang, setLangState] = useState<Lang>(() => detectInitialLang());
+  const setLang = (l: Lang) => { setLangState(l); saveLang(l); };
+  // Mirror to window so non-React helpers (writeSaves) can read it
+  useEffect(() => { (window as any).__nbaLang = lang; }, [lang]);
 
   function onLoad(id) {
     const saves = loadSaves(); const sv = saves[id]; if(!sv) return;
@@ -2707,11 +2738,13 @@ export default function App() {
     setActiveSaveId(id); setActiveInit(init); setScreen("game");
   }
 
-  if(screen==="lobby") return <SavesLobby onLoad={onLoad} onNew={()=>setScreen("create")}/>;
-  if(screen==="create") return <CreateScreen onDone={p=>{setPendingPlayer(p);setScreen("draft");}} onBack={()=>setScreen("lobby")}/>;
-  if(screen==="draft" && pendingPlayer) return <DraftScreen player={pendingPlayer} onDrafted={onDrafted} onBack={()=>setScreen("create")}/>;
-  if(screen==="game" && activeInit) return <MainScreen saveId={activeSaveId} init={activeInit} onQuit={()=>setScreen("lobby")}/>;
-  return null;
+  const inner =
+    screen==="lobby" ? <SavesLobby onLoad={onLoad} onNew={()=>setScreen("create")} setLang={setLang} lang={lang}/> :
+    screen==="create" ? <CreateScreen onDone={p=>{setPendingPlayer(p);setScreen("draft");}} onBack={()=>setScreen("lobby")} setLang={setLang} lang={lang}/> :
+    (screen==="draft" && pendingPlayer) ? <DraftScreen player={pendingPlayer} onDrafted={onDrafted} onBack={()=>setScreen("create")} setLang={setLang} lang={lang}/> :
+    (screen==="game" && activeInit) ? <MainScreen saveId={activeSaveId} init={activeInit} onQuit={()=>setScreen("lobby")} setLang={setLang} lang={lang}/> :
+    null;
+  return <LangContext.Provider value={lang}>{inner}</LangContext.Provider>;
 }
 
 // ── Mount (browser entry) ───────────────────────────────────────────────────
@@ -2727,7 +2760,7 @@ try {
 } catch(e: any) {
   const _l = document.getElementById("loading");
   if(_l) {
-    _l.innerHTML = '<div style="color:#ff6b6b;padding:24px;text-align:center;max-width:360px"><div style="font-size:36px;margin-bottom:16px">⚠️</div><div style="font-size:15px;font-weight:700;margin-bottom:10px">加载出错了</div><div style="font-size:11px;color:#888;word-break:break-all;line-height:1.6">' + ((e && e.message) || String(e)).substring(0,300) + '</div><div style="font-size:11px;color:#555;margin-top:12px">请截图这个错误发给开发者</div></div>';
+    _l.innerHTML = '<div style="color:#ff6b6b;padding:24px;text-align:center;max-width:360px"><div style="font-size:36px;margin-bottom:16px">⚠️</div><div style="font-size:15px;font-weight:700;margin-bottom:10px">{t("ui.error_title", lang)}</div><div style="font-size:11px;color:#888;word-break:break-all;line-height:1.6">' + ((e && e.message) || String(e)).substring(0,300) + '</div><div style="font-size:11px;color:#555;margin-top:12px">{t("ui.error_hint", lang)}</div></div>';
   }
   console.error(e);
 }
